@@ -1,0 +1,70 @@
+[
+  {
+    "name": "هيئة السوق المالية",
+    "asset": "/assets/partner-cma.svg"
+  },
+  {
+    "name": "وزارة التجارة",
+    "asset": "/assets/partner-commerce.svg"
+  },
+  {
+    "name": "منشآت",
+    "asset": "/assets/partner-monshaat.png"
+  },
+  {
+    "name": "وزارة الاستثمار",
+    "asset": "/assets/partner-investment.svg"
+  },
+  {
+    "name": "المركز السعودي للتنافسية والأعمال",
+    "asset": "/assets/partner-business.png"
+  },
+  {
+    "name": "الهيئة السعودية للملكية الفكرية",
+    "asset": "/assets/partner-saip.svg"
+  },
+  {
+    "name": "وزارة الصناعة والثروة المعدنية",
+    "asset": "/assets/partner-industry.png"
+  },
+  {
+    "name": "الإقامة المميزة",
+    "asset": "/assets/partner-premium.png"
+  },
+  {
+    "name": "منصة قوى (Qiwa)",
+    "asset": "/assets/partner-qiwa.png"
+  },
+  {
+    "name": "المؤسسة العامة للتأمينات الاجتماعية (GOSI)",
+    "asset": "/assets/partner-gosi.svg"
+  },
+  {
+    "name": "منصة بلدي",
+    "asset": "/assets/partner-balady.png"
+  },
+  {
+    "name": "هيئة الزكاة والضريبة والجمارك (ZATCA)",
+    "asset": "/assets/partner-zatca.svg"
+  },
+  {
+    "name": "منصة مدد (Mudad)",
+    "asset": "/assets/partner-mudad.svg"
+  },
+  {
+    "name": "الغرفة التجارية",
+    "asset": "/assets/partner-chambers.png"
+  },
+  {
+    "name": "منصة لوجستي",
+    "asset": "/assets/partner-logisti.png"
+  },
+  {
+    "name": "وزارة السياحة",
+    "asset": "/assets/partner-tourism.png"
+  },
+  {
+    "name": "منصة سبل",
+    "asset": "/assets/partner-spl.svg"
+  }
+]

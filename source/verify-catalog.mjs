@@ -1,0 +1,12 @@
+import {readFileSync,existsSync} from 'node:fs';
+import assert from 'node:assert/strict';
+import {validateCatalog} from './catalog-schema.mjs';
+const data=validateCatalog(JSON.parse(readFileSync('services-data.json','utf8')));
+const active=data.services.filter(s=>s.active!==false),html=readFileSync('../services.html','utf8');
+assert.equal((html.match(/class="catalog-service\b/g)||[]).length,active.length);
+for(const s of data.services)assert.equal(html.includes(`data-id="${s.id}"`),s.active!==false);
+for(const c of data.categories)assert.equal(c.count,active.filter(s=>s.category===c.id).length);
+assert.equal(data.categories.reduce((n,c)=>n+c.count,0),active.length);
+for(const p of JSON.parse(readFileSync('partners-data.json','utf8')))assert.ok(existsSync('..'+p.asset));
+assert.ok(html.includes('https://wa.me/966135129550'));assert.ok(!/href="(?:tel:|mailto:)/.test(html));
+console.log(`PASS: ${active.length} active services match output, category counts reconciled, partner files present, no dummy contact links.`);
