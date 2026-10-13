@@ -147,7 +147,7 @@
     // Wider, elevated tracking shots keep each modern landmark in view at its named stop.
     PLACES.filter(function(P){return P.s>1500}).forEach(function(P){
       var w=sstep(P.s-520,P.s-230,s)*(1-sstep(P.s+30,P.s+200,s));
-      if(w>0){var from=new T.Vector3(),to=new T.Vector3();W.pt(s-400,P.lat>0?-65:65,0,from);from.y=W.railY(s)+105;W.pt(P.s,P.lat*.45,0,to);to.y=145;
+      if(w>0){var from=new T.Vector3(),to=new T.Vector3();var portrait=geom.w/geom.h<.8;W.pt(s-(portrait?520:400),P.lat>0?-65:65,0,from);from.y=W.railY(s)+105;W.pt(P.s,P.lat*(portrait?.9:.45),0,to);to.y=145;
       cam.lerp(from,w);look.lerp(to,w);}
     });
     if (!reduce) {
