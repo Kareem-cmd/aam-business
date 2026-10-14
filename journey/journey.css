@@ -38,7 +38,7 @@
   :root[lang="en"] .eyebrow { letter-spacing: 0.14em; text-transform: uppercase; font-size: 12.5px; }
 
   /* fine film grain over the picture, drawn once into a small canvas by the script */
-  #grain { position: absolute; inset: 0; pointer-events: none; opacity: 0.07; mix-blend-mode: overlay; }
+  #grain { position: absolute; inset: 0; pointer-events: none; opacity: 0.018; mix-blend-mode: overlay; }
 
   #line { position: absolute; inset-inline-end: 22px; top: 50%; width: 12px; height: min(46%, 380px); transform: translateY(-50%); --p: 0%; }
   #line::before, #line::after { content: ''; position: absolute; left: 50%; top: 0; width: 2px; margin-left: -1px; border-radius: 2px; }

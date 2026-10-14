@@ -54,13 +54,13 @@
   };
 
   // ---------- look ----------
-  var DUSK = { top: '#0c1c4a', mid: '#5f79a6', hor: '#f3b57e', fog: '#dfa877', sun: '#ffb36e', sunI: 2.7, hs: '#9fb4e0', hg: '#a37a52', hi: 0.72, glow: 1, dens: 0.0036, bloom: 0.32 };
-  var NIGHT = { top: '#00040f', mid: '#04153c', hor: '#0e3266', fog: '#0b2452', sun: '#86a5ee', sunI: 0.34, hs: '#2a4484', hg: '#070b16', hi: 0.6, glow: 0, dens: 0.0009, bloom: 0.5 };
+  var DUSK = { top: '#0c1c4a', mid: '#5f79a6', hor: '#f3b57e', fog: '#dfa877', sun: '#ffb36e', sunI: 2.7, hs: '#9fb4e0', hg: '#a37a52', hi: 0.72, glow: 1, dens: 0.0036, bloom: 0.17 };
+  var NIGHT = { top: '#00040f', mid: '#04153c', hor: '#0e3266', fog: '#0b2452', sun: '#86a5ee', sunI: 0.34, hs: '#2a4484', hg: '#070b16', hi: 0.6, glow: 0, dens: 0.0009, bloom: 0.28 };
   var SUN = new T.Vector3(-0.42, 0.2, -0.885).normalize();
   var SIDE = 5.2;   // metres the camera rides to the left of the train
 
   var destinations=[],oldGroups=[],lastActive=0,qualityScale=1,slowFrames=0,renderedFrames=0;
-  var externalProgress=0;
+  var externalProgress=0,realism=null;
   function tell(type,value){
     if(parent===window){
       if(type==='goto')externalProgress=clamp(value,0,1);
@@ -227,6 +227,7 @@
     hemi.color.copy(lin(DUSK.hs)).lerp(lin(NIGHT.hs), n);
     hemi.groundColor.copy(lin(DUSK.hg)).lerp(lin(NIGHT.hg), n);
     hemi.intensity = lerp(DUSK.hi, NIGHT.hi, n);
+    if(realism)realism.update(s,sun);
     stars.material.opacity = n * 0.9;
     // reflections come from a dusk sky, so they fade with the daylight
     var ef = Math.round(lerp(1, 0.3, n) * 50) / 50;
@@ -246,11 +247,12 @@
   }
   // The low sun throws long shadows. The shadow map follows the camera through the desert and rests once night has fallen.
   function setShadow(s, eye) {
-    if (light || s > 950) return;
+    if (light || (s > 950 && s < 2800)) return;
     if(camera.position.distanceToSquared(shadowAt)<64)return;shadowAt.copy(camera.position);
     eye = eye || camera.position;
     sun.target.position.set(Math.round(eye.x / 8) * 8, 0, Math.round((eye.z - 100) / 8) * 8);
-    sun.position.copy(sun.target.position).addScaledVector(SUN, 420);
+    var coastal=s>=2800,sh=sun.shadow.camera;sh.left=coastal?-260:-150;sh.right=coastal?260:150;sh.top=coastal?180:75;sh.bottom=coastal?-180:-60;sh.far=coastal?1500:900;sh.updateProjectionMatrix();
+    sun.position.copy(sun.target.position).addScaledVector(SUN, coastal?800:420);
     sun.target.updateMatrixWorld();
     renderer.shadowMap.needsUpdate = true;
   }
@@ -828,6 +830,7 @@
     scene.add(opp.grp);
     traffic = W.traffic(light ? 80 : 160);
     scene.add(traffic.grp);
+    if(AAM.realism)realism=AAM.realism.install(scene,renderer,light,function(){lastActive=performance.now();if(camera&&sky)frame(prog);});
     scene.traverse(function (o) {
       (o.material ? [].concat(o.material) : []).forEach(function (m) {
         if (m.isMeshStandardMaterial && envMats.indexOf(m) < 0) { m.userData.env = m.envMapIntensity; envMats.push(m); }

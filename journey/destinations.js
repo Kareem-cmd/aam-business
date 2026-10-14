@@ -33,6 +33,7 @@
   materials.mirror=mat('#aac1cc',{metalness:.78,roughness:.22,envMapIntensity:.75});
   materials.interior=mat('#284a59',{map:glassTex,metalness:.12,roughness:.64});
   materials.pool=mat('#2c9da2',{metalness:.25,roughness:.2});
+  if(A.realism){['stone','plaster','ivory'].forEach(function(k){materials[k].color.copy(M.lin('#e8dfce'));A.realism.surface(materials[k],'plaster',4)});A.realism.surface(materials.rock,'rock',12);A.realism.surface(materials.sand,'sand',15);['glass','interior'].forEach(function(k){materials[k].userData.realGlass=true});materials.mirror.color.copy(M.lin('#b9c4c6'));materials.mirror.roughness=.12;materials.mirror.metalness=.92;materials.mirror.envMapIntensity=1.1;}
   function shape(k,g,s,lat,y,sx,sy,sz,rot){var p=point(s,lat,y);add(k,G.xf(g,p.x,p.y,p.z,0,W.yaw(s)+(rot||0),0,sx||1,sy||1,sz||1))}
   function ellipsoid(k,s,lat,y,rx,ry,rz,half){shape(k,new T.SphereGeometry(1,k==='green'?8:24,k==='green'?6:12,0,Math.PI*2,0,half?Math.PI/2:Math.PI),s,lat,y,rx,ry,rz)}
   function column(k,s,lat,y,r,h,top){shape(k,new T.CylinderGeometry(top===undefined?r:top,r,h,12),s,lat,y+h/2)}
@@ -49,14 +50,14 @@
   // A continuous terrain strip replaces disconnected rectangular display bases.
   for(var start=2700;start<7600;start+=600){
    var terrain=G.grid(110,48,function(u,v,o){var s=start+v*600,lat=coast(s)+(1800-coast(s))*u;o[0]=W.px(s)+lat;o[1]=ground(lat,s);o[2]=-s;},{uvFn:function(u,v,o,k){return k===0?o[0]/70:o[2]/70}});
-   G.colorize(terrain,function(x,y,z){var t=ss(10,70,y),n=M.noise3(x*.03,0,z*.03)*.06;return [.58+n-t*.15,.43+n-t*.13,.27+n-t*.1]});
-   var tm=mat('#ffffff',{map:sandTex,bumpMap:sandTex,bumpScale:.3,vertexColors:true});all.add(new T.Mesh(terrain,tm));
+   G.colorize(terrain,function(x,y,z){var t=ss(10,70,y),n=M.noise3(x*.03,0,z*.03)*.06;return [.94+n-t*.12,.89+n-t*.12,.79+n-t*.09]});
+   var tm=mat('#ffffff',{vertexColors:true});if(A.realism)A.realism.surface(tm,'terrain',15);all.add(new T.Mesh(terrain,tm));
   }
   // A single coast-following ocean, with depth colour, soft foam, waves and view-dependent reflection.
   var ocean=G.grid(52,250,function(u,v,o){var s=2500+v*5400,lat=coast(s)-u*5000;o[0]=W.px(s)+lat;o[1]=-.45;o[2]=-s;},{uvFn:function(u,v,o,k){return k===0?u*5000:v*5400}});
   var wu={time:{value:0},fogColor:{value:new T.Color('#728b9a')},fogDensity:{value:.0005}};waterUniforms.push(wu);
   var water=new T.ShaderMaterial({uniforms:wu,side:T.DoubleSide,extensions:{derivatives:true},vertexShader:`varying vec3 world;varying float shore;uniform float time;void main(){vec3 p=position;shore=uv.x;float strength=smoothstep(0.,40.,shore);p.y+=strength*(sin(p.x*.045+time*.45)*.28+sin(p.z*.065+p.x*.021-time*.3)*.17);world=p;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,fragmentShader:`varying vec3 world;varying float shore;uniform float time;uniform vec3 fogColor;uniform float fogDensity;void main(){vec3 V=normalize(cameraPosition-world);float a=world.x*.13+world.z*.07+time*.6;float b=world.z*.19-world.x*.05-time*.4;vec3 N=normalize(vec3(cos(a)*.13,1.,sin(b)*.1));float fres=pow(1.-max(dot(N,V),0.),4.);vec3 c=mix(vec3(.018,.29,.29),vec3(.012,.085,.16),smoothstep(0.,180.,shore));c=mix(c,vec3(.39,.56,.62),fres*.65);float spec=pow(max(dot(reflect(normalize(vec3(-.4,-.8,-.3)),N),V),0.),90.);c+=vec3(.9,.75,.48)*spec*.45;float foam=(1.-smoothstep(1.,6.,shore+sin(world.z*.14+time)*1.8))*.55;c=mix(c,vec3(.72,.81,.74),foam);float fog=1.-exp(-pow(length(cameraPosition-world)*fogDensity,2.));gl_FragColor=vec4(mix(c,fogColor,min(.92,fog)),1.);}`});
-  all.add(new T.Mesh(ocean,water));
+  all.add(A.realism?A.realism.water(ocean,water):new T.Mesh(ocean,water));
   // Urban fabric carries the eye out of Riyadh and all the way through Jeddah.
   for(var i=0;i<76;i++){
    var s=2650+i*13.7,side=i%2?-1:1,lat=side*(43+Math.floor(i/2)%3*34),h=13+rand(i)*26,w=14+rand(i+200)*7,y=ground(lat,s);
@@ -182,6 +183,7 @@
   var ring=[];for(var i=0;i<=48;i++){var a=i/48*Math.PI*2,p=point(5750+Math.cos(a)*27,-90,35+Math.sin(a)*27);ring.push(p);if(i%6===0){path('metal',[point(5750,-90,35),p],.3);box('glass',3,3,3,5750+Math.cos(a)*27,-90,32+Math.sin(a)*27)}}path('stone',ring,.7);path('metal',[point(5734,-90,0),point(5750,-90,35),point(5766,-90,0)],.8);
   for(var s=5900;s<6360;s+=28){palm(s,-26,11);palm(s,26,11);box('stone',8,.6,14,s,27,0);box('stone',8,.6,14,s,-27,0)}
   flush('qiddiya-valley-and-arrival');
+  all.traverse(function(o){if(o.isMesh&&!o.material.isShaderMaterial){o.receiveShadow=true;o.castShadow=!o.material.isMeshBasicMaterial;}});
   all.userData.update=function(s,p,fog){waterUniforms.forEach(function(u){u.time.value=p*70;u.fogColor.value.copy(fog)});};
   sets.push({id:'continuous-landscape',s:4400,lat:0,group:all});return sets;
  };
