@@ -172,10 +172,11 @@
       if(w>0){var from=new T.Vector3(),to=new T.Vector3();var portrait=geom.w/geom.h<.8;W.pt(s-(portrait?520:400),P.lat>0?-65:65,0,from);from.y=W.railY(s)+105;W.pt(P.s,P.lat*(portrait?.9:.45),0,to);to.y=145;
       cam.lerp(from,w);look.lerp(to,w);}
     });
-    destinations.forEach(function(d){
-      var w=sstep(d.s-460,d.s-220,s)*(1-sstep(d.s+90,d.s+380,s));
-      if(w>0){var from=new T.Vector3(),to=d.group.position.clone();W.pt(s-(geom.w/geom.h<.8?600:360),d.lat>0?-120:120,0,from);from.y=geom.w/geom.h<.8?210:165;to.y=40;cam.lerp(from,w);look.lerp(to,w);}
-    });
+    // One train-relative camera for the entire extension, including the NEOM interior.
+    var follow=sstep(2480,2800,s),portrait=geom.w/geom.h<.8;
+    if(follow>0){var chase=new T.Vector3(),ahead=new T.Vector3();W.pt(s-24,-8,portrait?16:12,chase);W.pt(s+105,W.TRK,5,ahead);cam.lerp(chase,follow);look.lerp(ahead,follow);}
+    var lens=lerp(geom.fov,portrait?63:59,follow);
+    if(Math.abs(camera.fov-lens)>.01){camera.fov=lens;camera.updateProjectionMatrix();}
     if (!reduce) {
       cam.x += 0.1 * Math.sin(time * 0.5);
       cam.y += 0.07 * Math.sin(time * 0.37 + 1);
@@ -190,7 +191,7 @@
     eye = eye || camera.position;
     function mix(a, b) { return _c1.set(a).lerp(_c2.set(b), n); }
     scene.fog.color.copy(mix(DUSK.fog, NIGHT.fog));
-    scene.fog.density = lerp(DUSK.dens, NIGHT.dens, sstep(40, 820, s));
+    scene.fog.density = lerp(lerp(DUSK.dens,NIGHT.dens,sstep(40,820,s)),.00065,sstep(2600,3000,s));
     u.uLow.value.copy(scene.fog.color);
     u.uHor.value.copy(mix(DUSK.hor, NIGHT.hor));
     u.uMid.value.copy(mix(DUSK.mid, NIGHT.mid));
@@ -245,8 +246,8 @@
     var s = setCamera(p);
     setLight(s);
     setPlaces(s);
-    destinations.forEach(function(d){d.group.visible=Math.abs(s-d.s)<1000});
-    oldGroups.forEach(function(g){g.visible=s<3250});
+    // Frustum culling and fog handle visibility; never hide an entire city at a distance threshold.
+    destinations.forEach(function(d){d.group.visible=true;if(d.group.userData.update)d.group.userData.update(s,p,scene.fog.color)});
     train.place(s + gapF(Math.min(1,p/.55)) + train.len);
     var lead = s + 2.4 * (1400 - s);
     opp.grp.visible = lead - s > -160 && lead - s < 1900;

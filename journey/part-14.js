@@ -153,7 +153,7 @@
       lamps.push(x - 20, 8, z + 20, x + 20, 8, z - 20);
     });
 
-    for (s = 650; s < 3600; s += cellS) for (i = -far; i <= far; i++) {
+    for (s = 650; s < 2650; s += cellS) for (i = -far; i <= far; i++) {
       if (i === 0) continue;
       // the first row stands back from the road; towers only further out, so the landmarks keep the skyline
       var lat = i * cellX + (i > 0 ? 34 : -34) + (r() - 0.5) * 14, al = Math.abs(lat), ss = s + (r() - 0.5) * 16;

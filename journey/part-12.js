@@ -267,6 +267,7 @@
 
   // ---------- ground ----------
   function groundY(x, s) {
+    if(s>2700)return -25*sstep(2700,2800,s);
     if (s < 0) return 0;
     var desert = 1 - sstep(540, 900, s);
     if (desert <= 0) return 0;
