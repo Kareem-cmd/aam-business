@@ -163,6 +163,14 @@
     W.pt(s + 70, on + att, 0, look);
     look.y = lerp(cam.y - 4.4, W.railY(s + 70) + 3 + lift, sstep(-6, 70, s));
   }
+  // Spatial envelopes are reversible: the same scroll position always gives the same reveal.
+  // NEOM's aerial shot finishes before its entry portal, preserving the interior ride.
+  var aerialStops = [
+    [2800,0], [3100,82], [3320,82], [3650,30],
+    [3900,74], [4050,74], [4230,124], [4420,0],
+    [5270,0], [5500,96], [5740,96], [6020,0]
+  ];
+  var chaseCamera = new T.Vector3(), chaseTarget = new T.Vector3();
   function setCamera(p) {
     var s = sCam(p);
     rig(s, geom.d0, geom.turn);
@@ -174,8 +182,19 @@
     });
     // One train-relative camera for the entire extension, including the NEOM interior.
     var follow=sstep(2480,2800,s),portrait=geom.w/geom.h<.8;
-    if(follow>0){var chase=new T.Vector3(),ahead=new T.Vector3();W.pt(s-24,-8,portrait?16:12,chase);W.pt(s+105,W.TRK,5,ahead);cam.lerp(chase,follow);look.lerp(ahead,follow);}
-    var lens=lerp(geom.fov,portrait?63:59,follow);
+    if(follow>0){
+      var rise=0;
+      for(var a=1;a<aerialStops.length;a++){
+        var prev=aerialStops[a-1],shot=aerialStops[a];
+        if(s>=prev[0]&&s<=shot[0]){rise=lerp(prev[1],shot[1],sstep(prev[0],shot[0],s));break;}
+      }
+      // Keep the rail and train as the visual anchor while revealing the surrounding skyline.
+      // No orbit or sideways camera jump; portrait framing gets slightly more distance.
+      W.pt(s-24-rise*(portrait?1.8:.62),-8, (portrait?16:12)+rise,chaseCamera);
+      W.pt(s+105,W.TRK,5+rise*.08,chaseTarget);
+      cam.lerp(chaseCamera,follow);look.lerp(chaseTarget,follow);
+    }
+    var lens=lerp(geom.fov,portrait?lerp(63,82,sstep(0,60,rise||0)):59,follow);
     if(Math.abs(camera.fov-lens)>.01){camera.fov=lens;camera.updateProjectionMatrix();}
     if (!reduce) {
       cam.x += 0.1 * Math.sin(time * 0.5);
