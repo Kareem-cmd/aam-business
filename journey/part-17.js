@@ -171,6 +171,11 @@
     [5270,0], [5500,96], [5740,96], [6020,0]
   ];
   var chaseCamera = new T.Vector3(), chaseTarget = new T.Vector3();
+  // Authored gaze: heritage street, waterfront dome, resort orbs, then NEOM's inhabited terraces.
+  // Curves have bounded slopes and no overshoot; scrolling backwards retraces the same shot.
+  var gazeSide=curve([[2700,0],[2980,24],[3120,10],[3300,-68],[3460,48],[3660,0],[3960,-95],[4170,-22],[4390,0],[4550,-29],[4700,28],[4840,-25],[4980,29],[5160,0],[5360,0],[5540,95],[5700,100],[5820,-34],[6020,0],[6250,0]]);
+  var gazeUp=curve([[2700,0],[3100,4],[3370,10],[3600,0],[4380,0],[4550,20],[4700,27],[4840,30],[4990,24],[5180,0],[5500,16],[5750,6],[6020,0],[6250,0]]);
+  var cameraDrift=curve([[2700,0],[3100,5],[3340,-8],[3600,0],[4170,-4],[4400,0],[4580,7],[4770,-7],[4970,7],[5200,0],[5500,-8],[5780,5],[6020,0],[6250,0]]);
   function setCamera(p) {
     var s = sCam(p);
     rig(s, geom.d0, geom.turn);
@@ -190,8 +195,9 @@
       }
       // Keep the rail and train as the visual anchor while revealing the surrounding skyline.
       // No orbit or sideways camera jump; portrait framing gets slightly more distance.
-      W.pt(s-24-rise*(portrait?1.8:.62),-8, (portrait?16:12)+rise,chaseCamera);
-      W.pt(s+105,W.TRK,5+rise*.08,chaseTarget);
+      var gesture=reduce?0:1,inside=sstep(4410,4490,s)*(1-sstep(5090,5240,s));
+      W.pt(s-24-rise*(portrait?1.8:.62),-8+cameraDrift(s)*gesture, (portrait?16:12)+rise+inside*5,chaseCamera);
+      W.pt(s+105-inside*32,W.TRK+gazeSide(s)*gesture*(portrait?.95:1),5+rise*.08+gazeUp(s)*gesture,chaseTarget);
       cam.lerp(chaseCamera,follow);look.lerp(chaseTarget,follow);
     }
     var lens=lerp(geom.fov,portrait?lerp(63,82,sstep(0,60,rise||0)):59,follow);
@@ -571,7 +577,7 @@
   // ---------- scroll ----------
   function maxScroll() { return Math.max(1, journeyEl.offsetHeight - scroller.clientHeight); }
   function target() { return externalProgress; }
-  var lastDraw=0;
+  var lastDraw=0,perfSamples=[],perfLast=0;
   function tick(now) {
     requestAnimationFrame(tick);
     if(document.hidden||now-lastDraw< (light?33:16))return;
@@ -591,9 +597,14 @@
     var started=performance.now();renderer.info.reset();frame(prog);var cost=performance.now()-started;
     if(cost>25||dt>(light?.07:.045))slowFrames++;else slowFrames=Math.max(0,slowFrames-1);
     if(slowFrames>45&&qualityScale>.7){qualityScale=Math.max(.7,qualityScale-.15);slowFrames=0;resize();}
-    if(location.search.includes('perf=1')){$('stage').dataset.frames=++renderedFrames;$('stage').dataset.progress=prog.toFixed(4);$('stage').dataset.renderMs=cost.toFixed(1);$('stage').dataset.calls=renderer.info.render.calls;$('stage').dataset.triangles=renderer.info.render.triangles;$('stage').dataset.scale=qualityScale;}
+    if(location.search.includes('perf=1')){
+      var stats=$('stage').dataset;stats.frames=++renderedFrames;stats.progress=prog.toFixed(4);stats.renderMs=cost.toFixed(1);stats.calls=renderer.info.render.calls;stats.triangles=renderer.info.render.triangles;stats.scale=qualityScale;
+      if(playing){if(perfLast){perfSamples.push(now-perfLast);if(perfSamples.length>120)perfSamples.shift();}perfLast=now;}else perfLast=0;
+      if(perfSamples.length>=30&&renderedFrames%30===0){var ordered=perfSamples.slice().sort(function(a,b){return a-b});stats.frameP95=ordered[Math.floor(ordered.length*.95)].toFixed(1);stats.sampleFrames=ordered.length;}
+    }
   }
   function setPlay(on) {
+    if(on){perfSamples=[];perfLast=0;}
     lastActive=performance.now();playing = on ? 1 : 0;
     $('play').textContent = TEXT[lang][on ? 'stop' : 'play'];
     $('play').setAttribute('aria-pressed', String(!!on));
