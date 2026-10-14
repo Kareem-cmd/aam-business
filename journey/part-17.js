@@ -19,6 +19,15 @@
     { a: 0.78, b: 0.91, ar: ['الاستثمار', 'المحطة التالية: الفرصة', 'في المركز المالي يلتقي الخط بمستقبل الاستثمار.'], en: ['Investment', 'Next stop: opportunity', 'At the financial district, the line meets the future of investment.'] },
     { a: 0.94, b: 2, ar: ['عام الأعمال للاستثمار', 'نكمل الطريق معك', 'من الفرصة إلى الإنجاز، تبدأ خطوتك التالية مع عام الأعمال.'], en: ['Aam Al Aamal Investment', 'We go the rest of the way with you', 'From opportunity to achievement. Your next step starts with Aam Al Aamal.'] }
   ];
+  // One content list for the original sequence and the new destinations.
+  COPY.pop();COPY.forEach(function(c){if(c.a>0)c.a*=.55;c.b*=.55;});
+  COPY.push(
+    {a:.555,b:.655,ar:['جدة','حكاية البحر وبوابة التجارة','من روح البلد إلى أفق الواجهة البحرية.'],en:['Jeddah','Where heritage meets the sea','From the old town to a new waterfront horizon.']},
+    {a:.665,b:.765,ar:['البحر الأحمر','فرص تنمو على ضفاف الجمال','جزر وضيافة وتجارب ترسم أفق السياحة.'],en:['The Red Sea','Opportunity on a beautiful shore','Islands, hospitality and a new tourism horizon.']},
+    {a:.775,b:.865,ar:['نيوم','مساحة لأفكار تتجاوز المألوف','تصور فني لعمارة المستقبل والابتكار.'],en:['NEOM','Space for a different tomorrow','An artistic vision of future architecture and innovation.']},
+    {a:.875,b:.955,ar:['القدية','حيث تتحول التجربة إلى وجهة','تصور فني للترفيه بين حواف جبال طويق.'],en:['Qiddiya','Where experience becomes a destination','An artistic entertainment landscape among the Tuwaiq cliffs.']},
+    {a:.96,b:2,ar:['عام الأعمال','نكمل الطريق معك','من الفرصة إلى الإنجاز، نرتب خطوتك التالية.'],en:['Aam Al Aamal','Your next chapter starts here','From opportunity to achievement, we guide your next step.']}
+  );
   // s is metres along the line, lat is metres to the right of it (negative is left)
   var PLACES = [
     { id: 'diriyah', s: 250, lat: -66, yaw: 0.95, scale: 1.25, reveal: false, H: 24 },   // At-Turaif, Diriyah
@@ -37,6 +46,8 @@
     { p: 0, ar: 'الخريطة', en: 'The map' }, { p: 0.15, ar: 'القافلة', en: 'The caravan' }, { p: 0.23, ar: 'الدرعية', en: 'Diriyah' }, { p: 0.39, ar: 'التحوّل', en: 'Transformation' },
     { p: 0.51, ar: 'الفيصلية', en: 'Al Faisaliah' }, { p: 0.665, ar: 'المملكة', en: 'Kingdom Centre' }, { p: 0.84, ar: 'المالية', en: 'KAFD' }, { p: 0.97, ar: 'الختام', en: 'The next chapter' }
   ];
+  STOPS.pop();STOPS.forEach(function(x){x.p*=.55});
+  STOPS.push({p:.625,ar:'جدة',en:'Jeddah'},{p:.735,ar:'البحر الأحمر',en:'Red Sea'},{p:.825,ar:'نيوم',en:'NEOM'},{p:.915,ar:'القدية',en:'Qiddiya'},{p:.985,ar:'الشعار',en:'Arrival'});
   var TEXT = {
     ar: { brand: 'عام الأعمال للاستثمار', proto: 'نموذج تفاعلي أولي', play: 'تشغيل تلقائي', stop: 'إيقاف', full: 'جودة كاملة', light: 'نسخة خفيفة', other: 'EN', note: 'هنا ينتهي المقطع الواقعي التجريبي. ما بعده بالمجسمات السابقة إلى أن يُستكمل.' },
     en: { brand: 'Aam Al Aamal Investment', proto: 'First interactive prototype', play: 'Autoplay', stop: 'Stop', full: 'Full quality', light: 'Light version', other: 'عربي', note: 'The photoreal trial segment ends here. What follows still uses the earlier models.' }
@@ -48,9 +59,20 @@
   var SUN = new T.Vector3(-0.42, 0.2, -0.885).normalize();
   var SIDE = 5.2;   // metres the camera rides to the left of the train
 
+  var destinations=[],oldGroups=[],lastActive=0,qualityScale=1,slowFrames=0,renderedFrames=0;
   var externalProgress=0;
-  function tell(type,value){parent.postMessage({aamJourney:true,type:type,value:value},location.origin)}
-  addEventListener('message',function(e){if(e.origin!==location.origin||e.source!==parent||!e.data?.aamJourney)return;if(e.data.type==='progress')externalProgress=clamp(Number(e.data.value)||0,0,1);});
+  function tell(type,value){
+    if(parent===window){
+      if(type==='goto')externalProgress=clamp(value,0,1);
+      if(type==='advance')externalProgress=clamp(externalProgress+value,0,1);
+      if(type==='scroll')externalProgress=clamp(externalProgress+value/(innerHeight*13),0,1);
+      if(type==='skip')location.href='../index.html#hero-title';
+      if(type==='goto'||type==='advance'||type==='scroll')lastActive=performance.now();
+      return;
+    }
+    parent.postMessage({aamJourney:true,type:type,value:value},location.origin);
+  }
+  addEventListener('message',function(e){if(e.origin!==location.origin||e.source!==parent||!e.data?.aamJourney)return;if(e.data.type==='progress'){externalProgress=clamp(Number(e.data.value)||0,0,1);lastActive=performance.now();}});
   var stage, scroller, journeyEl, renderer, scene, camera, composer = null, bloom = null;
   var sky, stars, sun, hemi, wall, train, opp, traffic, city;
   var lang = 'ar', light = false, reduce = false, prog = 0, time = 0, last = 0, playing = 0;
@@ -73,7 +95,7 @@
     };
   }
   function keys() {
-    sCam = curve([[0, -geom.d0], [0.11, 0], [0.17, 62], [0.27, 250], [0.36, 560], [0.46, 900], [0.56, 1150], [0.7, 1700], [0.87, 2440], [1, 2650]]);
+    sCam = curve([[0,-geom.d0],[.0605,0],[.0935,62],[.1485,250],[.198,560],[.253,900],[.308,1150],[.385,1700],[.4785,2440],[.55,2700],[.625,3250],[.735,4050],[.825,4850],[.915,5650],[1,6250]]);
   }
   // how far the tail of the train runs ahead of the camera: it comes from behind, passes underneath and leads the way in
   gapF = curve([[0, -175], [0.035, -88], [0.085, 8], [0.115, 26], [0.2, 20], [1, 22]]);
@@ -150,6 +172,10 @@
       if(w>0){var from=new T.Vector3(),to=new T.Vector3();var portrait=geom.w/geom.h<.8;W.pt(s-(portrait?520:400),P.lat>0?-65:65,0,from);from.y=W.railY(s)+105;W.pt(P.s,P.lat*(portrait?.9:.45),0,to);to.y=145;
       cam.lerp(from,w);look.lerp(to,w);}
     });
+    destinations.forEach(function(d){
+      var w=sstep(d.s-460,d.s-220,s)*(1-sstep(d.s+90,d.s+380,s));
+      if(w>0){var from=new T.Vector3(),to=d.group.position.clone();W.pt(s-(geom.w/geom.h<.8?600:360),d.lat>0?-120:120,0,from);from.y=geom.w/geom.h<.8?210:165;to.y=40;cam.lerp(from,w);look.lerp(to,w);}
+    });
     if (!reduce) {
       cam.x += 0.1 * Math.sin(time * 0.5);
       cam.y += 0.07 * Math.sin(time * 0.37 + 1);
@@ -160,7 +186,7 @@
   }
   // eye is the camera position the light and sky are set up around; the journey camera unless a key frame is being made
   function setLight(s, eye) {
-    var n = sstep(330, 880, s), u = sky.u;
+    var n = sstep(330,880,s)*(1-.75*sstep(2800,3100,s)), u = sky.u;
     eye = eye || camera.position;
     function mix(a, b) { return _c1.set(a).lerp(_c2.set(b), n); }
     scene.fog.color.copy(mix(DUSK.fog, NIGHT.fog));
@@ -195,6 +221,7 @@
   // The low sun throws long shadows. The shadow map follows the camera through the desert and rests once night has fallen.
   function setShadow(s, eye) {
     if (light || s > 950) return;
+    if(camera.position.distanceToSquared(shadowAt)<64)return;shadowAt.copy(camera.position);
     eye = eye || camera.position;
     sun.target.position.set(Math.round(eye.x / 8) * 8, 0, Math.round((eye.z - 100) / 8) * 8);
     sun.position.copy(sun.target.position).addScaledVector(SUN, 420);
@@ -214,11 +241,13 @@
     $('hint').style.opacity = (1 - sstep(0.01, 0.04, p)).toFixed(2);
   }
   function frame(p) {
-    $('logo-gate').style.opacity=sstep(.94,.985,p);$('copy').style.opacity=1-sstep(.94,.975,p);
+    $('logo-gate').style.opacity=sstep(.986,.999,p);$('copy').style.opacity=1-sstep(.96,.975,p);
     var s = setCamera(p);
     setLight(s);
     setPlaces(s);
-    train.place(s + gapF(p) + train.len);
+    destinations.forEach(function(d){d.group.visible=Math.abs(s-d.s)<1000});
+    oldGroups.forEach(function(g){g.visible=s<3250});
+    train.place(s + gapF(Math.min(1,p/.55)) + train.len);
     var lead = s + 2.4 * (1400 - s);
     opp.grp.visible = lead - s > -160 && lead - s < 1900;
     if (opp.grp.visible) opp.place(lead);
@@ -525,35 +554,39 @@
   var lastDraw=0;
   function tick(now) {
     requestAnimationFrame(tick);
-    if(document.hidden||now-lastDraw<(light?50:33))return;
+    if(document.hidden||now-lastDraw< (light?33:16))return;
+    if(!playing&&Math.abs(target()-prog)<.00003&&now-lastActive>450)return;
     lastDraw=now;
     var dt = Math.min(0.1, (now - last) / 1000 || 0);
     last = now;
     time += dt;
     if (playing) {
-      tell('advance',dt/36);
+      tell('advance',dt/65);
       if (target() >= 1) {setPlay(false);tell('skip',1);}
     }
     var tg = target();
     prog = reduce ? tg : prog + (tg - prog) * (1 - Math.exp(-dt * 6));
     if (Math.abs(tg - prog) < 0.00003) prog = tg;
     if(document.hidden||externalProgress>=1&&Math.abs(prog-1)<.0001)return;
-    frame(prog);
+    var started=performance.now();renderer.info.reset();frame(prog);var cost=performance.now()-started;
+    if(cost>25||dt>(light?.07:.045))slowFrames++;else slowFrames=Math.max(0,slowFrames-1);
+    if(slowFrames>45&&qualityScale>.7){qualityScale=Math.max(.7,qualityScale-.15);slowFrames=0;resize();}
+    if(location.search.includes('perf=1')){$('stage').dataset.frames=++renderedFrames;$('stage').dataset.progress=prog.toFixed(4);$('stage').dataset.renderMs=cost.toFixed(1);$('stage').dataset.calls=renderer.info.render.calls;$('stage').dataset.triangles=renderer.info.render.triangles;$('stage').dataset.scale=qualityScale;}
   }
   function setPlay(on) {
-    playing = on ? 1 : 0;
+    lastActive=performance.now();playing = on ? 1 : 0;
     $('play').textContent = TEXT[lang][on ? 'stop' : 'play'];
     $('play').setAttribute('aria-pressed', String(!!on));
   }
 
   // ---------- size and quality ----------
   function resize() {
-    var w = stage.clientWidth, h = window.innerHeight;
+    lastActive=performance.now();var w = stage.clientWidth, h = window.innerHeight;
     if (!w || !h) return;
     scroller.style.setProperty('--vh', h + 'px');
     geom.w = w; geom.h = h;
-    var ratio = Math.min(window.devicePixelRatio || 1, light ? 1.25 : 1.75);
-    renderer.setPixelRatio(ratio);
+    var ratio = Math.min(window.devicePixelRatio || 1, light ? 1 : 1.25);
+    ratio*=qualityScale;renderer.setPixelRatio(ratio);
     renderer.setSize(w, h, false);
     if (composer) { composer.setPixelRatio(ratio); composer.setSize(w, h); }
     if (skin) skinSize();
@@ -571,7 +604,7 @@
     if (light || !T.EffectComposer || !T.RenderPass || !T.UnrealBloomPass) return;
     try {
       var size = renderer.getDrawingBufferSize(new T.Vector2()), opt = { format: T.RGBAFormat, encoding: T.sRGBEncoding, minFilter: T.LinearFilter, magFilter: T.LinearFilter };
-      var rt = renderer.capabilities.isWebGL2 && T.WebGLMultisampleRenderTarget ? new T.WebGLMultisampleRenderTarget(size.x, size.y, opt) : new T.WebGLRenderTarget(size.x, size.y, opt);
+      var rt = new T.WebGLRenderTarget(size.x,size.y,opt);
       composer = new T.EffectComposer(renderer, rt);
       composer.addPass(new T.RenderPass(scene, camera));
       bloom = new T.UnrealBloomPass(new T.Vector2(geom.w, geom.h), 0.5, 0.5, 0.86);
@@ -582,7 +615,7 @@
     }
   }
   function setTier(l) {
-    light = l;
+    lastActive=performance.now();light = l;
     $('tier').textContent = TEXT[lang][light ? 'full' : 'light'];
     renderer.shadowMap.enabled = !light;
     setBloom();
@@ -647,7 +680,7 @@
   T.ShaderChunk.fog_fragment = T.ShaderChunk.fog_fragment.replace(/gl_FragColor\.rgb = mix\(/, 'if (fogFactor > (fogDensity < 0.0 ? 0.93 : 0.86 + 0.14 * fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))))) discard;\n\tgl_FragColor.rgb = mix(');
 
   function build() {
-    var q = { lod: light ? 1 : 0 };
+    var q = { lod: 1 };
     q.hi = q.lod === 0; q.mid = q.lod <= 1; q.seg = [1, 0.5, 0.25][q.lod];
     q.n = function (v) { return Math.max(3, Math.round(v * q.seg)); };
 
@@ -664,7 +697,7 @@
     sun.position.set(23, 1, -36).addScaledVector(SUN, 220);
     sun.target.position.set(23, 1, -36);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(light?1024:2048, light?1024:2048);
+    sun.shadow.mapSize.set(1024,1024);
     // the sun is low, so a shallow box across its direction already covers some 300 m of ground around the camera
     var sc = sun.shadow.camera;
     sc.left = -150; sc.right = 150; sc.top = 75; sc.bottom = -60; sc.near = 20; sc.far = 900;
@@ -708,6 +741,8 @@
     PLACES.forEach(function (P) { scene.add(buildPlace(P, q)); });
     city = W.city(q, avoid, low);
     scene.add(city.grp);
+    oldGroups=[city.grp,works,palms].concat(PLACES.map(function(p){return p.grp}));
+    destinations=W.destinations();destinations.forEach(function(d){scene.add(d.group)});
     var stand = palms.userData.palms.slice(), AG = AAM.G;
     PLACES.forEach(function (P) {
       if (P.id !== 'diriyah') return;
@@ -747,8 +782,8 @@
     guard.layers.set(3);
     scene.add(guard);
     // A physical, illuminated arrival portal straddles the same rail at the end of the journey.
-    var gate=new T.Group(),at=new T.Vector3(),toward=new T.Vector3();W.pt(2640,0,0,at);W.pt(2500,0,0,toward);
-    gate.position.copy(at);gate.position.y=W.railY(2640);toward.y=gate.position.y;gate.lookAt(toward);
+    var gate=new T.Group(),at=new T.Vector3(),toward=new T.Vector3();W.pt(6230,0,0,at);W.pt(6100,0,0,toward);
+    gate.position.copy(at);gate.position.y=W.railY(6230);toward.y=gate.position.y;gate.lookAt(toward);
     var steel=new T.MeshStandardMaterial({color:0x153544,metalness:.75,roughness:.25});
     var glow=new T.MeshBasicMaterial({color:0x73d0b3});
     function beam(w,h,d,x,y,z,mat){var m=new T.Mesh(new T.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);gate.add(m);}
@@ -788,6 +823,9 @@
       $('fail').hidden = false;tell('fallback',true);
       return;
     }
+    T.DefaultLoadingManager.onLoad=function(){lastActive=performance.now()};
+    document.addEventListener('visibilitychange',function(){if(!document.hidden)lastActive=performance.now()});
+    renderer.info.autoReset=false;
     renderer.outputEncoding = T.sRGBEncoding;
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1;

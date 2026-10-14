@@ -126,3 +126,7 @@
 }
 @media(max-height:540px) and (min-width:601px){.bar{padding:10px 20px;flex-direction:row}.brand b{display:none}#line{height:280px;transform:translateY(-42%) scale(.8);transform-origin:left center}.ch,.ch.low{top:25%}}
 @media(prefers-reduced-motion:reduce){.tools button,.stop,.stop i,.stop span,#line::after{transition:none}}
+/* Twelve stations, with the same aligned centers in both directions. */
+#line{height:432px}.stop{top:calc(var(--stop-index) * 36px);height:36px;min-height:36px}.stop i{top:12px}#line::before,#line::after{top:18px;height:396px}#line::after{height:calc(var(--p) * .916667);max-height:396px}
+@media(max-width:600px){#line{height:66px}.stop{top:22px;inset-inline-start:calc(var(--stop-index) * 8.333333%);width:8.333333%;height:44px;min-height:44px}.stop i{top:16px}#line::before,#line::after{top:43px;inset-inline-start:4.166667%;width:91.666667%;height:1px}#line::after{width:calc(var(--p) * .916667);height:1px}.stop.on span{max-width:110px}.stop span{font-size:9px}}
+@media(max-height:600px) and (min-width:601px){#line{transform:translateY(-42%) scale(.72);transform-origin:left center}}

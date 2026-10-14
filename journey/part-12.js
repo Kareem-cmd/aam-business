@@ -5,7 +5,7 @@
   'use strict';
   var T = THREE, AAM = window.AAM, G = AAM.G, M = AAM.M, D = AAM.draw;
   var lin = M.lin, sstep = M.sstep, clamp = M.clamp;
-  var W = AAM.world = { END: 2700, TRK: 2.1, flats: [] };
+  var W = AAM.world = { END: 6400, TRK: 2.1, flats: [] };
   var _v = new T.Vector3(), _w = new T.Vector3();
 
   // ---------- the line ----------
@@ -281,8 +281,8 @@
   }
   W.groundY = groundY;
   W.ground = function () {
-    var geo = G.grid(150, 300, function (u, v, o) {
-      var a = u * 2 - 1, s = 0.7 + 5600 * (0.3 * v + 0.7 * v * v), x = px(s) + 2400 * (0.2 * a + 0.8 * a * a * a);
+    var geo = G.grid(90, 160, function (u, v, o) {
+      var a = u * 2 - 1, s = 0.7 + 7600 * (0.3 * v + 0.7 * v * v), x = px(s) + 2400 * (0.2 * a + 0.8 * a * a * a);
       o[0] = x; o[1] = groundY(x, s); o[2] = -s;
     }, { uvFn: function (u, v, o, k) { return k === 0 ? o[0] / 46 : o[2] / 46; } });
     G.colorize(geo, function (x, y, z, nx, ny) {
