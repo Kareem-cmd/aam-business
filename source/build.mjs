@@ -36,6 +36,16 @@ writeFileSync(new URL('about.html',out),`${head('من نحن','عام الأعم
 writeFileSync(new URL('projects.json',out),JSON.stringify(works));
 writeFileSync(new URL('services.html',out),`${head('دليل الخدمات',`${catalog.services.length} خدمات مرتبة في ${catalog.categories.length} تصنيفات. ابحث واختر الخدمة المناسبة بحسب احتياجك والجهة أو المنصة.`,null)}${header()}${catalogPage(icon)}${footer()}</body></html>`);
 for(const name of readdirSync(out).filter(n=>n.endsWith('.html'))){const file=new URL(name,out);const html=readFileSync(file,'utf8').replace(/(src|href)="\/([^"?]+\.(?:js|css))"/g,(all,attribute,asset)=>{const hash=createHash('sha256').update(readFileSync(new URL(asset,out))).digest('hex').slice(0,12);return `${attribute}="/${asset}?v=${hash}"`});writeFileSync(file,html.replace(/(src|href)="\/(?!\/)([^"]*)"/g,(_,a,p)=>`${a}="./${!p||p.startsWith('#')?'index.html'+p:p}"`));}
+// Version the embedded journey and its controls so returning visitors receive updates.
+const journeyFile=new URL('journey/index.html',out);
+const journeyHtml=readFileSync(journeyFile,'utf8').replace(/(src|href)="([^"?]+\.(?:js|css))(?:\?v=[^"]*)?"/g,(_,attr,asset)=>{
+ const hash=createHash('sha256').update(readFileSync(new URL(asset,journeyFile))).digest('hex').slice(0,12);
+ return attr+'="'+asset+'?v='+hash+'"';
+});
+writeFileSync(journeyFile,journeyHtml);
+const journeyHash=createHash('sha256').update(journeyHtml).digest('hex').slice(0,12);
+const homeFile=new URL('index.html',out);
+writeFileSync(homeFile,readFileSync(homeFile,'utf8').replace('./journey/index.html"','./journey/index.html?v='+journeyHash+'"'));
 const publicBase='https://kareem-cmd.github.io/aam-business/';
 for(const name of readdirSync(out).filter(n=>n.endsWith('.html'))){const f=new URL(name,out);let html=readFileSync(f,'utf8');const current=['index.html','about.html','services.html'].includes(name);const url=publicBase+(name==='index.html'?'':name);html=html.replace('content="noindex,nofollow"',current?'content="index,follow"':'content="noindex,follow"').replace('</head>','<link rel="canonical" href="'+(current?url:publicBase+'services.html')+'"><meta property="og:url" content="'+url+'"><meta property="og:type" content="website"><meta property="og:image" content="'+publicBase+'assets/hero-v2.webp"></head>');writeFileSync(f,html);}
 writeFileSync(new URL('robots.txt',out),'User-agent: *\nAllow: /\nSitemap: '+publicBase+'sitemap.xml\n');

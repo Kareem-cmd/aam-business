@@ -6,14 +6,21 @@
  const count=document.querySelector('#results-count'),visibleCount=document.querySelector('#visible-count'),more=document.querySelector('#load-more'),empty=document.querySelector('#catalog-empty'),reset=document.querySelector('#reset-filters');
  const normalize=s=>s.normalize('NFKD').replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[()،,]/g,' ').toLowerCase();
  const entries=articles.map(el=>({el,id:el.dataset.id,category:el.dataset.categoryId,provider:el.dataset.provider,title:el.querySelector('h3').textContent,text:normalize(el.querySelector('.platform-intro')?.textContent||el.textContent)}));
- const params=new URLSearchParams(location.search);let category=params.get('category')||'',group=(params.get('group')||'').split(',').filter(Boolean),limit=12;
+ const params=new URLSearchParams(location.search);let category=params.get('category')||'',group=(params.get('group')||'').split(',').filter(Boolean),limit=12,showAll=params.get('all')==='1';
  if(!categories.some(b=>b.dataset.category===category))category='';group=group.filter(id=>categories.some(b=>b.dataset.category===id));
  search.value=params.get('q')||'';if([...provider.options].some(o=>o.value===params.get('provider')))provider.value=params.get('provider');
  function apply(updateUrl=true){
    const words=normalize(search.value.trim()).split(/\s+/).filter(Boolean);
-   const browsing=!!(category||group.length||provider.value||words.length);
+   const eligible=entries.filter(e=>(!category||e.category===category)&&(!group.length||group.includes(e.category))&&words.every(w=>e.text.includes(w)));
+   const totals=new Map();eligible.forEach(e=>totals.set(e.provider,(totals.get(e.provider)||0)+1));
+   const previous=provider.value;
+   provider.replaceChildren(new Option(eligible.length?'جميع الجهات والمنصات ('+eligible.length+')':'لا توجد جهات تطابق البحث',''));
+   totals.forEach((n,name)=>provider.add(new Option(name+' ('+n+')',name)));
+   provider.value=totals.has(previous)?previous:'';
+   provider.disabled=!eligible.length;
+   const browsing=!!(showAll||category||group.length||provider.value||words.length);
    document.querySelector('#category-welcome').hidden=browsing;
-   const found=entries.filter(e=>browsing&&(!category||e.category===category)&&(!group.length||group.includes(e.category))&&(!provider.value||e.provider===provider.value)&&words.every(w=>e.text.includes(w)));
+   const found=eligible.filter(e=>browsing&&(!provider.value||e.provider===provider.value));
    const visible=new Set(found.slice(0,limit).map(e=>e.id));entries.forEach(e=>e.el.hidden=!visible.has(e.id));
    categories.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.category===category&&!group.length)));
    const title=category?categories.find(b=>b.dataset.category===category).querySelector('span').textContent:group.length?'خدمات المسار المختار':browsing?'نتائج البحث':'اختر التصنيف للبدء';document.querySelector('#results-title').textContent=title;
@@ -21,11 +28,11 @@
    visibleCount.textContent=found.length?`عرض ${Math.min(limit,found.length)} من ${found.length} خدمة`:'';
    more.hidden=limit>=found.length;empty.hidden=!browsing||found.length>0;reset.hidden=!(search.value||provider.value||category||group.length);
    const groupNote=document.querySelector('#group-note');groupNote.hidden=!group.length;groupNote.textContent=group.length?'يعرض الدليل خدمات المسار الذي اخترته. اختر تصنيفًا أو امسح التصفية لتوسيع البحث.':'';
-   if(updateUrl){const p=new URLSearchParams();if(category)p.set('category',category);if(group.length)p.set('group',group.join(','));if(provider.value)p.set('provider',provider.value);if(search.value.trim())p.set('q',search.value.trim());history.replaceState(null,'',location.pathname+(p.size?'?'+p.toString():''))}
+   if(updateUrl){const p=new URLSearchParams();if(showAll)p.set('all','1');if(category)p.set('category',category);if(group.length)p.set('group',group.join(','));if(provider.value)p.set('provider',provider.value);if(search.value.trim())p.set('q',search.value.trim());history.replaceState(null,'',location.pathname+(p.size?'?'+p.toString():''))}
  }
- function clear(){category='';group=[];provider.value='';search.value='';limit=12;apply();search.focus()}
- categories.forEach(b=>b.addEventListener('click',()=>{category=b.dataset.category;group=[];provider.value='';search.value='';limit=12;apply()}));
- search.addEventListener('input',()=>{limit=12;apply()});provider.addEventListener('change',()=>{limit=12;apply()});reset.addEventListener('click',clear);document.querySelector('#empty-reset').addEventListener('click',clear);
+ function clear(){showAll=true;category='';group=[];provider.value='';search.value='';limit=12;apply();search.focus()}
+ categories.forEach(b=>b.addEventListener('click',()=>{showAll=false;category=b.dataset.category;group=[];provider.value='';search.value='';limit=12;apply()}));
+ search.addEventListener('input',()=>{limit=12;apply()});provider.addEventListener('change',()=>{showAll=true;limit=12;apply()});reset.addEventListener('click',clear);document.querySelector('#empty-reset').addEventListener('click',clear);
  more.addEventListener('click',()=>{const old=new Set(entries.filter(e=>!e.el.hidden).map(e=>e.id));limit+=12;apply();entries.find(e=>!e.el.hidden&&!old.has(e.id))?.el.querySelector('button').focus({preventScroll:true})});
  const dialog=document.querySelector('#service-dialog'),selected=new Set();
  try{sessionStorage.removeItem('aam-selected-services-v1')}catch{}

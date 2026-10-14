@@ -210,7 +210,7 @@
     var cur = 0;
     stops.forEach(function (st, i) { if (p >= st.S.p - 0.03) cur = i; });
     stops.forEach(function (st, i) { st.el.classList.toggle('on', i === cur);st.el.setAttribute('aria-current',i===cur?'step':'false'); st.el.classList.toggle('done', i < cur); });
-    $('line').style.setProperty('--p', (p * 100).toFixed(2) + '%');
+    $('line').style.setProperty('--p', (cur / (stops.length - 1) * 100).toFixed(2) + '%');
     $('hint').style.opacity = (1 - sstep(0.01, 0.04, p)).toFixed(2);
   }
   function frame(p) {
@@ -611,12 +611,13 @@
       $('copy').appendChild(c);
       chapters.push({ C: C, el: c, k: k, h: h, s: s });
     });
-    STOPS.forEach(function (S) {
+    STOPS.forEach(function (S, index) {
       var b = el('button', 'stop'), t = el('span');
       b.type = 'button';
       b.appendChild(el('i'));
       b.appendChild(t);
-      b.style.top = (S.p * 100) + '%';
+      b.style.setProperty('--stop-index', index);
+      b.dataset.number = String(index + 1).padStart(2, '0');
       b.addEventListener('click', function () { setPlay(false); tell('goto',S.p); });
       $('line').appendChild(b);
       stops.push({ S: S, el: b, t: t });
