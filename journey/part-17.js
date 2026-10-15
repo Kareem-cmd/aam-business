@@ -54,13 +54,14 @@
   };
 
   // ---------- look ----------
-  var DUSK = { top: '#0c1c4a', mid: '#5f79a6', hor: '#f3b57e', fog: '#dfa877', sun: '#ffb36e', sunI: 2.7, hs: '#9fb4e0', hg: '#a37a52', hi: 0.72, glow: 1, dens: 0.0036, bloom: 0.17 };
-  var NIGHT = { top: '#00040f', mid: '#04153c', hor: '#0e3266', fog: '#0b2452', sun: '#86a5ee', sunI: 0.34, hs: '#2a4484', hg: '#070b16', hi: 0.6, glow: 0, dens: 0.0009, bloom: 0.28 };
+  var DUSK = { top: '#0c1c4a', mid: '#5f79a6', hor: '#f3b57e', fog: '#dfa877', sun: '#ffb36e', sunI: 2.7, hs: '#9fb4e0', hg: '#a37a52', hi: 1.05, glow: 1, dens: 0.0036, bloom: 0.17 };
+  var NIGHT = { top: '#00040f', mid: '#04153c', hor: '#0e3266', fog: '#0b2452', sun: '#86a5ee', sunI: 0.65, hs: '#91a9d0', hg: '#354354', hi: 1.05, glow: 0, dens: 0.0009, bloom: 0.28 };
   var SUN = new T.Vector3(-0.42, 0.2, -0.885).normalize();
   var SIDE = 5.2;   // metres the camera rides to the left of the train
 
   var destinations=[],oldGroups=[],lastActive=0,qualityScale=1,slowFrames=0,renderedFrames=0;
   var externalProgress=0,realism=null;
+  var mobile=matchMedia('(pointer: coarse)').matches||Math.min(innerWidth,innerHeight)<600;
   function tell(type,value){
     if(parent===window){
       if(type==='goto')externalProgress=clamp(value,0,1);
@@ -131,7 +132,7 @@
       if (night) o.userData.desc.night = night;
       o.material = AAM.makeMat(o.userData.desc, 'night', 0.8);
       // Clear-coated glazing keeps the architectural surfaces reflective at grazing angles.
-      if(o.material.isMeshStandardMaterial && /glass|ga|gb|gc/.test(o.userData.key||'')){
+      if(!mobile && o.material.isMeshStandardMaterial && /glass|ga|gb|gc/.test(o.userData.key||'')){
         var physical=new T.MeshPhysicalMaterial();T.MeshStandardMaterial.prototype.copy.call(physical,o.material);
         physical.clearcoat=.6;physical.clearcoatRoughness=.18;physical.roughness=Math.min(.3,physical.roughness);o.material.dispose();o.material=physical;
       }
@@ -180,9 +181,9 @@
     var s = sCam(p);
     rig(s, geom.d0, geom.turn);
     // Wider, elevated tracking shots keep each modern landmark in view at its named stop.
-    PLACES.filter(function(P){return P.s>1500}).forEach(function(P){
+    PLACES.filter(function(P){return P.s>1000}).forEach(function(P){
       var w=sstep(P.s-520,P.s-230,s)*(1-sstep(P.s+30,P.s+200,s));
-      if(w>0){var from=new T.Vector3(),to=new T.Vector3();var portrait=geom.w/geom.h<.8;W.pt(s-(portrait?520:400),P.lat>0?-65:65,0,from);from.y=W.railY(s)+105;W.pt(P.s,P.lat*(portrait?.9:.45),0,to);to.y=145;
+      if(w>0){var from=new T.Vector3(),to=new T.Vector3();var portrait=geom.w/geom.h<.8;W.pt(s-(portrait?650:400),P.lat>0?-65:65,0,from);from.y=W.railY(s)+105;W.pt(P.s,P.lat*(portrait?.75:.45),0,to);to.y=145;
       cam.lerp(from,w);look.lerp(to,w);}
     });
     // One train-relative camera for the entire extension, including the NEOM interior.
@@ -196,8 +197,8 @@
       // Keep the rail and train as the visual anchor while revealing the surrounding skyline.
       // No orbit or sideways camera jump; portrait framing gets slightly more distance.
       var gesture=reduce?0:1,inside=sstep(4410,4490,s)*(1-sstep(5090,5240,s));
-      W.pt(s-24-rise*(portrait?1.8:.62),-8+cameraDrift(s)*gesture, (portrait?16:12)+rise+inside*5,chaseCamera);
-      W.pt(s+105-inside*32,W.TRK+gazeSide(s)*gesture*(portrait?.95:1),5+rise*.08+gazeUp(s)*gesture,chaseTarget);
+      W.pt(s-24-rise*(portrait?2.2:.62),-8+cameraDrift(s)*gesture, (portrait?16:12)+rise+inside*5,chaseCamera);
+      W.pt(s+105-inside*32,W.TRK+gazeSide(s)*gesture*(portrait?.55:1),5+rise*.08+gazeUp(s)*gesture,chaseTarget);
       cam.lerp(chaseCamera,follow);look.lerp(chaseTarget,follow);
     }
     var lens=lerp(geom.fov,portrait?lerp(63,82,sstep(0,60,rise||0)):59,follow);
@@ -212,7 +213,7 @@
   }
   // eye is the camera position the light and sky are set up around; the journey camera unless a key frame is being made
   function setLight(s, eye) {
-    var n = sstep(330,880,s)*(1-.75*sstep(2800,3100,s)), u = sky.u;
+    var n = sstep(330,880,s)*(1-.94*sstep(2800,3100,s)), u = sky.u;
     eye = eye || camera.position;
     function mix(a, b) { return _c1.set(a).lerp(_c2.set(b), n); }
     scene.fog.color.copy(mix(DUSK.fog, NIGHT.fog));
@@ -230,7 +231,7 @@
     if(realism)realism.update(s,sun);
     stars.material.opacity = n * 0.9;
     // reflections come from a dusk sky, so they fade with the daylight
-    var ef = Math.round(lerp(1, 0.3, n) * 50) / 50;
+    var ef = Math.round(lerp(1, 0.6, n) * 50) / 50;
     if (ef !== envF) { envF = ef; envMats.forEach(function (m) { m.envMapIntensity = m.userData.env * ef; }); }
     if (bloom) bloom.strength = lerp(DUSK.bloom, NIGHT.bloom, n);
     sky.mesh.position.copy(eye);
@@ -265,6 +266,7 @@
     var cur = 0;
     stops.forEach(function (st, i) { if (p >= st.S.p - 0.03) cur = i; });
     stops.forEach(function (st, i) { st.el.classList.toggle('on', i === cur);st.el.setAttribute('aria-current',i===cur?'step':'false'); st.el.classList.toggle('done', i < cur); });
+    if($('station-select').value!==String(cur))$('station-select').value=String(cur);
     $('line').style.setProperty('--p', (cur / (stops.length - 1) * 100).toFixed(2) + '%');
     $('hint').style.opacity = (1 - sstep(0.01, 0.04, p)).toFixed(2);
   }
@@ -582,7 +584,7 @@
   var lastDraw=0,perfSamples=[],perfLast=0;
   function tick(now) {
     requestAnimationFrame(tick);
-    if(document.hidden||now-lastDraw< (light?33:16))return;
+    if(document.hidden||now-lastDraw< (light?1000/30-1:1000/60-1))return;
     if(!playing&&Math.abs(target()-prog)<.00003&&now-lastActive>450)return;
     lastDraw=now;
     var dt = Math.min(0.1, (now - last) / 1000 || 0);
@@ -618,13 +620,13 @@
     if (!w || !h) return;
     scroller.style.setProperty('--vh', h + 'px');
     geom.w = w; geom.h = h;
-    var ratio = Math.min(window.devicePixelRatio || 1, light ? 1 : 1.25);
+    var ratio = Math.min(window.devicePixelRatio || 1, mobile ? 1 : (light ? 1 : 1.25));
     ratio*=qualityScale;renderer.setPixelRatio(ratio);
     renderer.setSize(w, h, false);
     if (composer) { composer.setPixelRatio(ratio); composer.setSize(w, h); }
     if (skin) skinSize();
     var asp = w / h;
-    geom.fov = asp < 0.8 ? 54 : (asp < 1.25 ? 52 : 46);   // never taller than the key frames, which cover 56 degrees
+    geom.fov = asp < 0.8 ? 68 : (asp < 1.25 ? 52 : 46);   // never taller than the key frames, which cover 56 degrees
     geom.turn = asp < 0.8 ? 1.2 : (asp < 1.25 ? 1.1 : 1);   // a tall screen sees less to each side, so the camera turns a little further toward a landmark
     camera.aspect = asp;
     camera.fov = geom.fov;
@@ -648,7 +650,7 @@
     }
   }
   function setTier(l) {
-    lastActive=performance.now();light = l;
+    lastActive=performance.now();light = mobile || l;
     $('tier').textContent = TEXT[lang][light ? 'full' : 'light'];
     renderer.shadowMap.enabled = !light;
     setBloom();
@@ -668,6 +670,7 @@
     $('tier').textContent = t[light ? 'full' : 'light'];
     $('play').textContent = t[playing ? 'stop' : 'play'];
     chapters.forEach(function (c) { var x = c.C[lang]; c.k.textContent = x[0]; c.h.textContent = x[1]; c.s.textContent = x[2]; });
+    Array.from($('station-select').options).forEach(function(o,i){o.textContent=STOPS[i][lang]});
     stops.forEach(function (s) { s.t.textContent = s.S[lang]; s.el.setAttribute('aria-label', s.S[lang]); });
   }
   function buildUI() {
@@ -677,7 +680,9 @@
       $('copy').appendChild(c);
       chapters.push({ C: C, el: c, k: k, h: h, s: s });
     });
+    var select=el('select');select.id='station-select';select.setAttribute('aria-label','انتقل إلى محطة');$('station-control').appendChild(select);
     STOPS.forEach(function (S, index) {
+      var option=el('option',null,S.ar);option.value=index;select.appendChild(option);
       var b = el('button', 'stop'), t = el('span');
       b.type = 'button';
       b.appendChild(el('i'));
@@ -690,6 +695,7 @@
     });
     $('skip').addEventListener('click',function(){setPlay(false);tell('skip',1)});
     $('lang').addEventListener('click', function () { setLang(lang === 'ar' ? 'en' : 'ar'); });
+    $('station-select').addEventListener('change',function(){setPlay(false);tell('goto',STOPS[Number(this.value)].p)});
     $('tier').addEventListener('click', function () { setTier(!light); });
     $('play').addEventListener('click', function () {
       if (!playing && target() > 0.985) tell('goto',0);
@@ -713,7 +719,7 @@
   T.ShaderChunk.fog_fragment = T.ShaderChunk.fog_fragment.replace(/gl_FragColor\.rgb = mix\(/, 'if (fogFactor > (fogDensity < 0.0 ? 0.93 : 0.86 + 0.14 * fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))))) discard;\n\tgl_FragColor.rgb = mix(');
 
   function build() {
-    var q = { lod: 1 };
+    var q = { lod: mobile ? 2 : 1 };
     q.hi = q.lod === 0; q.mid = q.lod <= 1; q.seg = [1, 0.5, 0.25][q.lod];
     q.n = function (v) { return Math.max(3, Math.round(v * q.seg)); };
 
@@ -830,7 +836,7 @@
     scene.add(opp.grp);
     traffic = W.traffic(light ? 80 : 160);
     scene.add(traffic.grp);
-    if(AAM.realism)realism=AAM.realism.install(scene,renderer,light,function(){lastActive=performance.now();if(camera&&sky)frame(prog);});
+    if(AAM.realism)realism=AAM.realism.install(scene,renderer,light,function(){lastActive=performance.now();});
     scene.traverse(function (o) {
       (o.material ? [].concat(o.material) : []).forEach(function (m) {
         if (m.isMeshStandardMaterial && envMats.indexOf(m) < 0) { m.userData.env = m.envMapIntensity; envMats.push(m); }
@@ -849,7 +855,7 @@
     $('fallback-skip').addEventListener('click',function(){tell('skip',1)});
     stage = $('stage'); scroller = $('scroller'); journeyEl = $('journey');
     reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    light = Math.min(window.innerWidth, window.innerHeight) < 560 || (navigator.deviceMemory && navigator.deviceMemory <= 2) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2);
+    light = mobile || Math.min(window.innerWidth, window.innerHeight) < 560 || (navigator.deviceMemory && navigator.deviceMemory <= 2) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2);
     try {
       renderer = new T.WebGLRenderer({ canvas: $('gl'), antialias: true, powerPreference: 'high-performance' });
     } catch (err) {
@@ -872,7 +878,7 @@
     setLang('ar');
     setTier(light);
     if (!sCam) keys();   // the page can start hidden with no size yet; the camera path must exist all the same
-    if (window.AAM_SKIN) skinInit(window.AAM_SKIN);
+    if (!mobile && window.AAM_SKIN) skinInit(window.AAM_SKIN);
     renderer.shadowMap.needsUpdate = true;
     window.addEventListener('resize', resize);
     if (window.ResizeObserver) new ResizeObserver(resize).observe(scroller);

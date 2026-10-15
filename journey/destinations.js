@@ -12,6 +12,7 @@
   return -1.5+beach*(1.5+Math.max(0,mountains))+cliff;
  }
  W.destinations=function(){
+  var low=matchMedia('(pointer: coarse)').matches||Math.min(innerWidth,innerHeight)<600;
   var all=new T.Group(),sets=[],waterUniforms=[],batches={},rng=M.rng?M.rng(58):null;
   function rand(n){var v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v)}
   function tex(type){var c=document.createElement('canvas');c.width=c.height=512;var x=c.getContext('2d');x.fillStyle=type==='glass'?'#254451':'#cbb99c';x.fillRect(0,0,512,512);
@@ -25,7 +26,7 @@
   function flush(name){var group=new T.Group();Object.keys(batches).forEach(function(k){var geo=G.merge(batches[k]);geo.computeBoundingSphere();group.add(new T.Mesh(geo,materials[k]))});batches={};group.name=name;all.add(group);return group}
   function add(k,g){(batches[k]||(batches[k]=[])).push(g)}
   function box(k,w,h,d,s,lat,y,rot){var p=new T.Vector3();W.pt(s,lat,0,p);add(k,G.xf(new T.BoxGeometry(w,h,d),p.x,y+h/2,p.z,0,W.yaw(s)+(rot||0),0))}
-  function path(k,pts,r){add(k,new T.TubeGeometry(new T.CatmullRomCurve3(pts),Math.max(20,pts.length*5),r,5,false))}
+  function path(k,pts,r){add(k,new T.TubeGeometry(new T.CatmullRomCurve3(pts),Math.max(10,pts.length*(low?2:5)),r,low?4:5,false))}
   function point(s,lat,y){var p=new T.Vector3();W.pt(s,lat,0,p);p.y=y;return p}
   // Regional landmarks are authored silhouettes; shared materials keep them in a few draw calls.
   materials.ivory=mat('#ece2ca',{map:sandTex,roughness:.72});
@@ -35,7 +36,7 @@
   materials.pool=mat('#2c9da2',{metalness:.25,roughness:.2});
   if(A.realism){['stone','plaster','ivory'].forEach(function(k){materials[k].color.copy(M.lin('#e8dfce'));A.realism.surface(materials[k],'plaster',4)});A.realism.surface(materials.rock,'rock',12);A.realism.surface(materials.sand,'sand',15);['glass','interior'].forEach(function(k){materials[k].userData.realGlass=true});materials.mirror.color.copy(M.lin('#b9c4c6'));materials.mirror.roughness=.12;materials.mirror.metalness=.92;materials.mirror.envMapIntensity=1.1;}
   function shape(k,g,s,lat,y,sx,sy,sz,rot){var p=point(s,lat,y);add(k,G.xf(g,p.x,p.y,p.z,0,W.yaw(s)+(rot||0),0,sx||1,sy||1,sz||1))}
-  function ellipsoid(k,s,lat,y,rx,ry,rz,half){shape(k,new T.SphereGeometry(1,k==='green'?8:24,k==='green'?6:12,0,Math.PI*2,0,half?Math.PI/2:Math.PI),s,lat,y,rx,ry,rz)}
+  function ellipsoid(k,s,lat,y,rx,ry,rz,half){shape(k,new T.SphereGeometry(1,k==='green'?6:(low?16:24),k==='green'?4:(low?8:12),0,Math.PI*2,0,half?Math.PI/2:Math.PI),s,lat,y,rx,ry,rz)}
   function column(k,s,lat,y,r,h,top){shape(k,new T.CylinderGeometry(top===undefined?r:top,r,h,12),s,lat,y+h/2)}
   function arch(s,lat,y,r,k){var pts=[];for(var a=0;a<=16;a++){var t=a/16*Math.PI;pts.push(point(s,lat+Math.cos(t)*r,y+Math.sin(t)*r))}path(k||'ivory',pts,.35)}
   function tree(s,lat,y,h){column('wood',s,lat,y,.22,h*.6);
@@ -44,17 +45,17 @@
    ellipsoid('green',s-h*.18,lat+h*.22,y+h*.7,h*.25,h*.3,h*.28);
   }
   function palm(s,lat,h){var y=ground(lat,s);path('wood',[point(s,lat,y),point(s+1,lat+1,y+h)],.45);
-   for(var n=0;n<9;n++){var angle=n*Math.PI*2/9,base=point(s,lat,y+h);var blade=G.grid(7,2,function(u,v,o){var reach=u*7.5,half=Math.sin(Math.PI*u)*.75,cross=(v*2-1)*half;o[0]=base.x+Math.cos(angle)*reach-Math.sin(angle)*cross;o[1]=base.y+Math.sin(Math.PI*u)*1.6-u*u*3.2-Math.abs(cross)*.3;o[2]=base.z+Math.sin(angle)*reach+Math.cos(angle)*cross;});add('green',blade);}
+   for(var n=0;n<9;n++){var angle=n*Math.PI*2/9,base=point(s,lat,y+h);var blade=G.grid(low?4:7,2,function(u,v,o){var reach=u*7.5,half=Math.sin(Math.PI*u)*.75,cross=(v*2-1)*half;o[0]=base.x+Math.cos(angle)*reach-Math.sin(angle)*cross;o[1]=base.y+Math.sin(Math.PI*u)*1.6-u*u*3.2-Math.abs(cross)*.3;o[2]=base.z+Math.sin(angle)*reach+Math.cos(angle)*cross;});add('green',blade);}
 
   }
   // A continuous terrain strip replaces disconnected rectangular display bases.
   for(var start=2700;start<7600;start+=600){
-   var terrain=G.grid(110,48,function(u,v,o){var s=start+v*600,lat=coast(s)+(1800-coast(s))*u;o[0]=W.px(s)+lat;o[1]=ground(lat,s);o[2]=-s;},{uvFn:function(u,v,o,k){return k===0?o[0]/70:o[2]/70}});
+   var terrain=G.grid(low?55:110,low?24:48,function(u,v,o){var s=start+v*600,lat=coast(s)+(1800-coast(s))*u;o[0]=W.px(s)+lat;o[1]=ground(lat,s);o[2]=-s;},{uvFn:function(u,v,o,k){return k===0?o[0]/70:o[2]/70}});
    G.colorize(terrain,function(x,y,z){var t=ss(10,70,y),n=M.noise3(x*.03,0,z*.03)*.06;return [.94+n-t*.12,.89+n-t*.12,.79+n-t*.09]});
    var tm=mat('#ffffff',{vertexColors:true});if(A.realism)A.realism.surface(tm,'terrain',15);all.add(new T.Mesh(terrain,tm));
   }
   // A single coast-following ocean, with depth colour, soft foam, waves and view-dependent reflection.
-  var ocean=G.grid(52,250,function(u,v,o){var s=2500+v*5400,lat=coast(s)-u*5000;o[0]=W.px(s)+lat;o[1]=-.45;o[2]=-s;},{uvFn:function(u,v,o,k){return k===0?u*5000:v*5400}});
+  var ocean=G.grid(low?20:52,low?100:250,function(u,v,o){var s=2500+v*5400,lat=coast(s)-u*5000;o[0]=W.px(s)+lat;o[1]=-.45;o[2]=-s;},{uvFn:function(u,v,o,k){return k===0?u*5000:v*5400}});
   var wu={time:{value:0},fogColor:{value:new T.Color('#728b9a')},fogDensity:{value:.0005}};waterUniforms.push(wu);
   var water=new T.ShaderMaterial({uniforms:wu,side:T.DoubleSide,extensions:{derivatives:true},vertexShader:`varying vec3 world;varying float shore;uniform float time;void main(){vec3 p=position;shore=uv.x;float strength=smoothstep(0.,40.,shore);p.y+=strength*(sin(p.x*.045+time*.45)*.28+sin(p.z*.065+p.x*.021-time*.3)*.17);world=p;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,fragmentShader:`varying vec3 world;varying float shore;uniform float time;uniform vec3 fogColor;uniform float fogDensity;void main(){vec3 V=normalize(cameraPosition-world);float a=world.x*.13+world.z*.07+time*.6;float b=world.z*.19-world.x*.05-time*.4;vec3 N=normalize(vec3(cos(a)*.13,1.,sin(b)*.1));float fres=pow(1.-max(dot(N,V),0.),4.);vec3 c=mix(vec3(.018,.29,.29),vec3(.012,.085,.16),smoothstep(0.,180.,shore));c=mix(c,vec3(.39,.56,.62),fres*.65);float spec=pow(max(dot(reflect(normalize(vec3(-.4,-.8,-.3)),N),V),0.),90.);c+=vec3(.9,.75,.48)*spec*.45;float foam=(1.-smoothstep(1.,6.,shore+sin(world.z*.14+time)*1.8))*.55;c=mix(c,vec3(.72,.81,.74),foam);float fog=1.-exp(-pow(length(cameraPosition-world)*fogDensity,2.));gl_FragColor=vec4(mix(c,fogColor,min(.92,fog)),1.);}`});
   all.add(A.realism?A.realism.water(ocean,water):new T.Mesh(ocean,water));
