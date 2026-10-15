@@ -8,7 +8,7 @@
   var t=loader.load('pbr/'+file,function(){refresh()},undefined,function(){document.documentElement.dataset.materialFallback='true';refresh()});
   t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=mobile?2:4;t.encoding=color?T.sRGBEncoding:T.LinearEncoding;cache[file]=t;return t;
  }
- function pack(kind){return {color:texture((mobile?'mobile/':'')+kind+'-Diffuse.jpg',true),normal:mobile?null:texture(kind+'-nor_gl.jpg',false),arm:mobile?null:texture(kind+'-arm.jpg',false)}}
+ function pack(kind){return {color:texture((mobile?'mobile/':'')+kind+'-Diffuse.jpg',true),normal:null,arm:mobile?null:texture(kind+'-arm.jpg',false)}}
  var packs={};
  function surface(mat,kind,meters){
   mat.userData.realSurface={kind:kind,meters:meters};return mat;
@@ -27,45 +27,30 @@
    s.fragmentShader=`varying vec3 realPosition; varying vec3 realWorldNormal;
 uniform sampler2D realColor,realNormal,realArm,realRock; uniform float realMeters;
 vec3 realWeights(){vec3 w=pow(abs(normalize(realWorldNormal)),vec3(6.));return w/max(.001,w.x+w.y+w.z);}
-vec4 realSample(sampler2D t){vec3 p=realPosition/realMeters;${light?'vec3 n=abs(realWorldNormal);vec2 uv=n.y>max(n.x,n.z)?p.xz:(n.x>n.z?p.zy:p.xy);return texture2D(t,uv);':'vec3 w=realWeights();return texture2D(t,p.zy)*w.x+texture2D(t,p.xz)*w.y+texture2D(t,p.xy)*w.z;'}}
+vec4 realSample(sampler2D t){vec3 p=realPosition/realMeters;${terrain?'return texture2D(t,p.xz);':light?'vec3 n=abs(realWorldNormal);vec2 uv=n.y>max(n.x,n.z)?p.xz:(n.x>n.z?p.zy:p.xy);return texture2D(t,uv);':'vec3 w=realWeights();return texture2D(t,p.zy)*w.x+texture2D(t,p.xz)*w.y+texture2D(t,p.xy)*w.z;'}}
 `+s.fragmentShader;
    s.fragmentShader=s.fragmentShader.replace('#include <map_fragment>',`vec3 realAlbedo=realSample(realColor).rgb;
 ${terrain?'realAlbedo=mix(realAlbedo,realSample(realRock).rgb,smoothstep(7.,34.,realPosition.y)*.8);':''}
-diffuseColor.rgb*=pow(realAlbedo,vec3(2.2));
+diffuseColor.rgb*=pow(mix(vec3(1.),realAlbedo,${terrain?'.48':'.65'}),vec3(2.2));
 ${light?'':'diffuseColor.rgb*=mix(.88,1.,realSample(realArm).r);'}`);
    if(!light)s.fragmentShader=s.fragmentShader.replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=clamp(roughnessFactor*realSample(realArm).g,.55,1.);');
-   if(!light)s.fragmentShader=s.fragmentShader.replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
-vec3 rp=realPosition/realMeters,rw=realWeights(),rn=normalize(realWorldNormal);
-vec3 nx=texture2D(realNormal,rp.zy).xyz*2.-1.;vec3 ny=texture2D(realNormal,rp.xz).xyz*2.-1.;vec3 nz=texture2D(realNormal,rp.xy).xyz*2.-1.;
-vec3 detail=normalize(vec3(nx.z*sign(rn.x),nx.y,nx.x)*rw.x+vec3(ny.x,ny.z*sign(rn.y),ny.y)*rw.y+vec3(nz.x,nz.y,nz.z*sign(rn.z))*rw.z);
-normal=normalize(mix(normal,mat3(viewMatrix)*detail,.16));`);
+
   };
-  mat.customProgramCacheKey=function(){return 'aam-real-v2-'+desc.kind+'-'+light};mat.needsUpdate=true;
+  mat.customProgramCacheKey=function(){return 'aam-real-v3-'+desc.kind+'-'+light};mat.needsUpdate=true;
  }
  function water(geometry,fallback){
   var low=mobile||innerWidth<700||(navigator.deviceMemory&&navigator.deviceMemory<=2);
   if(low||!T.Water)return new T.Mesh(geometry,fallback);
-  // Water.js expects its plane normal along local Z. Rotate geometry and mesh inversely.
-  geometry.translate(0,.45,0);geometry.rotateX(Math.PI/2);
-  var w=new T.Water(geometry,{textureWidth:512,textureHeight:256,waterNormals:texture('water-normal.jpg',false),sunDirection:new T.Vector3(-.42,.2,-.885).normalize(),sunColor:0xffcf9f,waterColor:0x167c82,distortionScale:1.25,fog:true,side:T.DoubleSide});
-  w.rotation.x=-Math.PI/2;w.position.y=-.45;w.userData.realWater=true;
-  var m=w.material;
-  m.vertexShader='varying float shoreDistance;\n'+m.vertexShader;
-  m.vertexShader=m.vertexShader.replace('mirrorCoord = modelMatrix','shoreDistance=uv.x;\nmirrorCoord = modelMatrix');
-  m.fragmentShader='varying float shoreDistance;\n'+m.fragmentShader;
-  m.fragmentShader=m.fragmentShader.replace('float rf0 = 0.3;','float rf0 = 0.0204;');
-  m.fragmentShader=m.fragmentShader.replace('vec3 outgoingLight = albedo;',`vec3 shallow=vec3(.025,.25,.23);float depth=smoothstep(0.,150.,shoreDistance);
-vec3 outgoingLight=mix(mix(shallow,waterColor,depth)*.48,albedo,.82);
-float foam=(1.-smoothstep(.8,3.8,shoreDistance+sin(worldPosition.z*.18-time)*1.1))*.22;
-outgoingLight=mix(outgoingLight,vec3(.48,.57,.5),foam);`);
-  m.fragmentShader=m.fragmentShader.replace('#include <tonemapping_fragment>','#include <tonemapping_fragment>\n#include <encodings_fragment>');
-  var capture=w.onBeforeRender,last=-1e6;
-  w.onBeforeRender=function(renderer,scene,camera){
-   var now=performance.now();if(now-last<120)return;
-   last=now;capture.call(w,renderer,scene,camera);
-  };
-  return w;
+  // A single HDR-lit surface avoids recursive planar captures during depth/plate rendering.
+  var indices=geometry.index.array;for(var i=0;i<indices.length;i+=3){var swap=indices[i+1];indices[i+1]=indices[i+2];indices[i+2]=swap;}geometry.index.needsUpdate=true;geometry.computeVertexNormals();
+  var normal=texture('water-normal.jpg',false);normal.repeat.set(1/45,1/45);
+  var mat=new T.MeshStandardMaterial({color:0x367b83,roughness:.28,metalness:.3,envMapIntensity:.8,normalMap:normal,normalScale:new T.Vector2(.28,.28)});
+  var flow={value:0};mat.onBeforeCompile=function(shader){shader.uniforms.realFlow=flow;shader.fragmentShader='uniform float realFlow;\n'+shader.fragmentShader;
+   shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_maps>',T.ShaderChunk.normal_fragment_maps.replace(/vUv/g,'(vUv+vec2(realFlow*.002,realFlow*.001))'));
+  };mat.customProgramCacheKey=function(){return 'aam-ocean-hdr-v1'};
+  var mesh=new T.Mesh(geometry,mat);mesh.userData.realWater=true;mesh.userData.waterFlow=flow;return mesh;
  }
+
  A.realism={surface:surface,water:water,install:function(scene,renderer,light,invalidate){
   var own=++generation,seen=new Set(),waters=[];refresh=invalidate;
   scene.traverse(function(o){
@@ -80,7 +65,7 @@ outgoingLight=mix(outgoingLight,vec3(.48,.57,.5),foam);`);
    scene.environment=target.texture;hdr.dispose();pm.dispose();if(old)old.dispose();
    document.documentElement.dataset.realEnvironment='ready';invalidate();
   },undefined,function(){document.documentElement.dataset.realEnvironment='fallback';invalidate()});
-  return {update:function(s,sun){waters.forEach(function(w){var u=w.material.uniforms;u.time.value=s*.012;u.sunColor.value.copy(sun.color).multiplyScalar(Math.min(1.2,sun.intensity));})}};
+  return {update:function(s,sun){waters.forEach(function(w){w.userData.waterFlow.value=s*.012;})}};
  }};
 })();
 

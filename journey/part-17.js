@@ -167,14 +167,14 @@
   // Spatial envelopes are reversible: the same scroll position always gives the same reveal.
   // NEOM's aerial shot finishes before its entry portal, preserving the interior ride.
   var aerialStops = [
-    [2800,0], [3100,82], [3320,82], [3650,30],
+    [2800,0], [3000,28], [3130,38], [3350,72], [3650,30],
     [3900,74], [4050,74], [4230,124], [4420,0],
-    [5270,0], [5500,96], [5740,96], [6020,0]
+    [5270,0], [5500,65], [5740,82], [6020,0]
   ];
   var chaseCamera = new T.Vector3(), chaseTarget = new T.Vector3();
   // Authored gaze: heritage street, waterfront dome, resort orbs, then NEOM's inhabited terraces.
   // Curves have bounded slopes and no overshoot; scrolling backwards retraces the same shot.
-  var gazeSide=curve([[2700,0],[2980,24],[3120,10],[3300,-68],[3460,48],[3660,0],[3960,-95],[4170,-22],[4390,0],[4550,-29],[4700,28],[4840,-25],[4980,29],[5160,0],[5360,0],[5540,95],[5700,100],[5820,-34],[6020,0],[6250,0]]);
+  var gazeSide=curve([[2700,0],[2980,24],[3120,10],[3300,-68],[3460,48],[3660,0],[3960,-170],[4170,-100],[4390,0],[4550,-29],[4700,28],[4840,-25],[4980,29],[5160,0],[5360,0],[5540,95],[5700,100],[5820,-34],[6020,0],[6250,0]]);
   var gazeUp=curve([[2700,0],[3100,4],[3370,10],[3600,0],[4380,0],[4550,20],[4700,27],[4840,30],[4990,24],[5180,0],[5500,16],[5750,6],[6020,0],[6250,0]]);
   var cameraDrift=curve([[2700,0],[3100,5],[3340,-8],[3600,0],[4170,-4],[4400,0],[4580,7],[4770,-7],[4970,7],[5200,0],[5500,-8],[5780,5],[6020,0],[6250,0]]);
   function setCamera(p) {
@@ -198,7 +198,7 @@
       // No orbit or sideways camera jump; portrait framing gets slightly more distance.
       var gesture=reduce?0:1,inside=sstep(4410,4490,s)*(1-sstep(5090,5240,s));
       W.pt(s-24-rise*(portrait?2.2:.62),-8+cameraDrift(s)*gesture, (portrait?16:12)+rise+inside*5,chaseCamera);
-      W.pt(s+105-inside*32,W.TRK+gazeSide(s)*gesture*(portrait?.55:1),5+rise*.08+gazeUp(s)*gesture,chaseTarget);
+      W.pt(s+105-inside*32,W.TRK+gazeSide(s)*gesture*(portrait?.85:1),5+rise*.08+gazeUp(s)*gesture,chaseTarget);
       cam.lerp(chaseCamera,follow);look.lerp(chaseTarget,follow);
     }
     var lens=lerp(geom.fov,portrait?lerp(63,82,sstep(0,60,rise||0)):59,follow);
@@ -716,7 +716,7 @@
   // Haze is a different colour from the sky behind it, so anything fully hazed would still show as a flat shape.
   // Past 86% haze a surface is thinned out instead, and what is far away dissolves into the sky.
   // A depth pass asks for a clean edge in place of the thinning by giving the haze a negative density (the amount of haze is the same).
-  T.ShaderChunk.fog_fragment = T.ShaderChunk.fog_fragment.replace(/gl_FragColor\.rgb = mix\(/, 'if (fogFactor > (fogDensity < 0.0 ? 0.93 : 0.86 + 0.14 * fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))))) discard;\n\tgl_FragColor.rgb = mix(');
+  // Continuous fog: discard dithering caused visible stippling and unstable surface edges.
 
   function build() {
     var q = { lod: mobile ? 2 : 1 };
