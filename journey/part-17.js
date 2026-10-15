@@ -174,7 +174,7 @@
   var chaseCamera = new T.Vector3(), chaseTarget = new T.Vector3();
   // Authored gaze: heritage street, waterfront dome, resort orbs, then NEOM's inhabited terraces.
   // Curves have bounded slopes and no overshoot; scrolling backwards retraces the same shot.
-  var gazeSide=curve([[2700,0],[2980,24],[3120,10],[3300,-68],[3460,48],[3660,0],[3960,-170],[4170,-100],[4390,0],[4550,-29],[4700,28],[4840,-25],[4980,29],[5160,0],[5360,0],[5540,95],[5700,100],[5820,-34],[6020,0],[6250,0]]);
+  var gazeSide=curve([[2700,0],[2980,24],[3120,10],[3300,-68],[3460,48],[3660,0],[3960,-170],[4170,-100],[4390,0],[4550,-29],[4700,28],[4840,-25],[4980,29],[5160,0],[5360,0],[5540,-115],[5700,-95],[5820,100],[6020,0],[6250,0]]);
   var gazeUp=curve([[2700,0],[3100,4],[3370,10],[3600,0],[4380,0],[4550,20],[4700,27],[4840,30],[4990,24],[5180,0],[5500,16],[5750,6],[6020,0],[6250,0]]);
   var cameraDrift=curve([[2700,0],[3100,5],[3340,-8],[3600,0],[4170,-4],[4400,0],[4580,7],[4770,-7],[4970,7],[5200,0],[5500,-8],[5780,5],[6020,0],[6250,0]]);
   function setCamera(p) {
@@ -276,7 +276,7 @@
     setLight(s);
     setPlaces(s);
     // Frustum culling and fog handle visibility; never hide an entire city at a distance threshold.
-    destinations.forEach(function(d){d.group.visible=true;if(d.group.userData.update)d.group.userData.update(s,p,scene.fog.color)});
+    destinations.forEach(function(d){d.group.visible=true;if(d.group.userData.update)d.group.userData.update(s,p,scene.fog.color,time,!reduce&&p>.86&&p<.965)});
     train.place(s + gapF(Math.min(1,p/.55)) + train.len);
     var lead = s + 2.4 * (1400 - s);
     opp.grp.visible = lead - s > -160 && lead - s < 1900;
@@ -585,7 +585,8 @@
   function tick(now) {
     requestAnimationFrame(tick);
     if(document.hidden||now-lastDraw< (light?1000/30-1:1000/60-1))return;
-    if(!playing&&Math.abs(target()-prog)<.00003&&now-lastActive>450)return;
+    var ridesActive=!reduce&&prog>.86&&prog<.965;
+    if(!playing&&!ridesActive&&Math.abs(target()-prog)<.00003&&now-lastActive>450)return;
     lastDraw=now;
     var dt = Math.min(0.1, (now - last) / 1000 || 0);
     last = now;
@@ -602,7 +603,7 @@
     if(cost>25||dt>(light?.07:.045))slowFrames++;else slowFrames=Math.max(0,slowFrames-1);
     if(slowFrames>45&&qualityScale>.7){qualityScale=Math.max(.7,qualityScale-.15);slowFrames=0;resize();}
     if(location.search.includes('perf=1')){
-      var stats=$('stage').dataset;stats.frames=++renderedFrames;stats.progress=prog.toFixed(4);stats.renderMs=cost.toFixed(1);stats.calls=renderer.info.render.calls;stats.triangles=renderer.info.render.triangles;stats.scale=qualityScale;
+      var stats=$('stage').dataset;stats.frames=++renderedFrames;stats.progress=prog.toFixed(4);stats.renderMs=cost.toFixed(1);stats.calls=renderer.info.render.calls;stats.triangles=renderer.info.render.triangles;stats.scale=qualityScale;stats.ridesActive=String(ridesActive);stats.ridePhase=time.toFixed(3);stats.renderMode='live-geometry';
       if(playing){if(perfLast){perfSamples.push(now-perfLast);if(perfSamples.length>120)perfSamples.shift();}perfLast=now;}else perfLast=0;
       if(perfSamples.length>=30&&renderedFrames%30===0){var ordered=perfSamples.slice().sort(function(a,b){return a-b});stats.frameP95=ordered[Math.floor(ordered.length*.95)].toFixed(1);stats.sampleFrames=ordered.length;}
     }
@@ -878,7 +879,7 @@
     setLang('ar');
     setTier(light);
     if (!sCam) keys();   // the page can start hidden with no size yet; the camera path must exist all the same
-    if (!mobile && window.AAM_SKIN) skinInit(window.AAM_SKIN);
+    // Reprojection plates were authored for a different camera: use the live geometry at every viewport.
     renderer.shadowMap.needsUpdate = true;
     window.addEventListener('resize', resize);
     if (window.ResizeObserver) new ResizeObserver(resize).observe(scroller);
@@ -898,4 +899,5 @@
   addEventListener('keydown',function(e){if(e.target.matches('button,a,input,select'))return;var delta={ArrowDown:100,ArrowUp:-100,PageDown:innerHeight*.8,PageUp:-innerHeight*.8,' ':innerHeight*.8}[e.key];if(delta){e.preventDefault();setPlay(false);tell('scroll',delta);}});
   setTimeout(function(){try{boot()}catch(err){$('boot').hidden=true;$('fail').hidden=false;tell('fallback',true);console.error('Journey initialization failed',err)}},30);
 })();
+
 

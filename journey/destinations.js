@@ -211,7 +211,7 @@
    box('light',.2,12,7,qs-48+i*10,ql+56.1,qy+9);
   }
   // Qiddiya sits in the same mountain terrain, with a valley kept clear for the train.
-  var roller=[];for(var i=0;i<=72;i++){var a=i/72*Math.PI*2;roller.push(point(5600+Math.sin(a)*155,-125+Math.cos(a)*65,35+Math.sin(a*3)*18+Math.cos(a)*12))}path('metal',roller,1.1);path('light',roller.map(function(p){return p.clone().add(new T.Vector3(0,.3,0))}),.13);roller.filter(function(_,i){return i%5===0}).forEach(function(p){path('metal',[new T.Vector3(p.x,0,p.z),p],.7)});
+  var roller=[];for(var i=0;i<=72;i++){var a=i/72*Math.PI*2;var rs=5600+Math.sin(a)*155,rl=-125+Math.cos(a)*65;roller.push(point(rs,rl,Math.max(35+Math.sin(a*3)*18+Math.cos(a)*12,ground(rl,rs)+12)))}var coasterCurve=new T.CatmullRomCurve3(roller.slice(0,-1),true);add('metal',new T.TubeGeometry(coasterCurve,low?160:240,.65,5,true));roller.filter(function(_,i){return i%5===0}).forEach(function(p){path('metal',[new T.Vector3(p.x,0,p.z),p],.7)});
   // Valley visitor pavilions: shaded low roofs, deep glazing, grounded plinths.
   for(var i=0;i<5;i++){var s=5420+i*80,w=22+i%3*4,lat=54,y=ground(lat,s);
    box('limestone',w,6,22,s,lat,y);box('glazing',w-3,4,.35,s-11.3,lat,y+.8);
@@ -219,11 +219,32 @@
    for(var col=-2;col<=2;col++)box('copper',.35,6.5,.5,s-13,lat+col*4,y);
    palm(s,30,10);
   }
-  var ring=[];for(var i=0;i<=48;i++){var a=i/48*Math.PI*2,p=point(5750+Math.cos(a)*27,-90,35+Math.sin(a)*27);ring.push(p);if(i%6===0){path('metal',[point(5750,-90,35),p],.3);box('glass',3,3,3,5750+Math.cos(a)*27,-90,32+Math.sin(a)*27)}}path('stone',ring,.7);path('metal',[point(5734,-90,0),point(5750,-90,35),point(5766,-90,0)],.8);
+  // Rotating rim and upright gondolas use a small number of shared geometries/materials.
+  var park=new T.Group(),wheelBase=point(5810,-75,35);park.position.copy(wheelBase);park.rotation.y=W.yaw(5810);all.add(park);
+  var rim=new T.Group();park.add(rim);
+  rim.add(new T.Mesh(new T.TorusGeometry(27,.65,6,low?48:64),materials.ivory));
+  for(var j=0;j<8;j++){var angle=j*Math.PI/4;
+   rim.add(new T.Mesh(G.bar([0,0,0],[27*Math.cos(angle),27*Math.sin(angle),0],.28),materials.metal));
+  }
+  [-6,6].forEach(function(z){[-14,14].forEach(function(x){park.add(new T.Mesh(G.bar([x,-35,z],[0,0,z],1),materials.ivory))})});
+  var cabins=[],cabinGeo=new T.BoxGeometry(3.3,2.7,2.8),roofGeo=new T.BoxGeometry(3.7,.25,3.2);
+  for(var j=0;j<8;j++){var cabin=new T.Group();cabin.add(new T.Mesh(cabinGeo,materials.glazing));var roof=new T.Mesh(roofGeo,materials.copper);roof.position.y=1.5;cabin.add(roof);park.add(cabin);cabins.push(cabin);}
+  var coasterCars=[],bodyGeo=new T.BoxGeometry(2.2,.85,3.5),seatGeo=new T.BoxGeometry(1.8,.7,.35);
+  for(var j=0;j<4;j++){var car=new T.Group(),body=new T.Mesh(bodyGeo,materials.warm);body.position.y=1;car.add(body);
+   [-.85,.65].forEach(function(z){var seat=new T.Mesh(seatGeo,materials.teal);seat.position.set(0,1.65,z);car.add(seat);});
+   all.add(car);coasterCars.push(car);
+  }
+  var rideClock=0,rideLast=null;
+  function animateRides(time,active){
+   if(rideLast!==null&&active)rideClock+=Math.min(.1,Math.max(0,time-rideLast));rideLast=time;
+   var phase=rideClock*.12;rim.rotation.z=phase;
+   cabins.forEach(function(c,j){var a=phase+j*Math.PI/4;c.position.set(27*Math.cos(a),27*Math.sin(a)-1.8,0);});
+   coasterCars.forEach(function(c,j){var u=((rideClock/38-j*.006)%1+1)%1,p=coasterCurve.getPointAt(u),t=coasterCurve.getTangentAt(u);c.position.copy(p);c.lookAt(p.clone().add(t));});
+  }
   for(var s=5900;s<6360;s+=28){palm(s,-26,11);palm(s,26,11);box('stone',8,.6,14,s,27,0);box('stone',8,.6,14,s,-27,0)}
   flush('qiddiya-valley-and-arrival');
   all.traverse(function(o){if(o.isMesh&&!o.material.isShaderMaterial){o.receiveShadow=true;o.castShadow=!o.material.isMeshBasicMaterial;}});
-  all.userData.update=function(s,p,fog){waterUniforms.forEach(function(u){u.time.value=p*70;u.fogColor.value.copy(fog)});};
+  all.userData.update=function(s,p,fog,time,active){animateRides(time||0,!!active);waterUniforms.forEach(function(u){u.time.value=p*70;u.fogColor.value.copy(fog)});};
   sets.push({id:'continuous-landscape',s:4400,lat:0,group:all});return sets;
  };
 })();
