@@ -18,3 +18,9 @@
 
 /* The embedded journey owns its navigation; avoid duplicate overlapping skip controls. */
 .inside-journey .journey-skip{display:none}.journey-unavailable .journey-skip{display:block}
+
+/* Approved office address and supplied partner mark. */
+.contact-cards .contact-address{grid-column:1/-1;align-items:flex-start}.contact-address address{font-style:normal;font-size:14px;line-height:1.9;overflow-wrap:anywhere}.contact-address address span{font-size:12px;color:#c7d2e3}.platform-logo img[src*="partner-invest-saudi"]{object-fit:cover;background:#f7f7f7}
+@media(max-width:650px){.contact-address address{font-size:13px}.contact-cards .contact-address{flex-direction:row}}
+
+.contact-cards .contact-hours{grid-column:1/-1;flex-direction:row;align-items:flex-start}
