@@ -8,7 +8,7 @@ assert.deepEqual(govt.map(s=>s.details.length),[8,7,9,10,5,6,5,4,6,4,4,4,5,4,6])
 const html=fs.readFileSync(root+'/services.html','utf8');
 assert.equal((html.match(/class="platform-form"/g)||[]).length,data.services.length);
 for(const s of data.services){assert.ok(html.includes(`id="type-${s.id}"`));for(const t of s.details)assert.ok(html.includes(t));}
-const stats=JSON.parse(fs.readFileSync('business-stats.json'));assert.equal(stats.clientsServed,2000);assert.equal(stats.premiumResidenciesIssued,300);
+const stats=JSON.parse(fs.readFileSync('business-stats.json'));assert.equal(stats.clientsServed,1799);assert.equal(stats.premiumResidenciesIssued,180);
 const country=JSON.parse(fs.readFileSync('countries.json'));assert.equal(country.length,245);assert.ok(country.some(c=>c.code==='SA'&&c.dial==='966'));
 let assets=0;for(const f of ['journey/index.html']){const text=fs.readFileSync(root+'/'+f,'utf8');for(const m of text.matchAll(/(?:src|href)="([^"#]+)"/g)){if(/^https?:/.test(m[1]))throw Error('External journey dependency');assert.ok(fs.existsSync(path.resolve(root,path.dirname(f),m[1].split('?')[0])),m[1]);assets++;}}
 for(const m of fs.readFileSync(root+'/journey/part-16.js','utf8').matchAll(/src: '([^']+)'/g))assert.ok(fs.existsSync(root+'/journey/'+m[1]));

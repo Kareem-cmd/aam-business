@@ -21,3 +21,5 @@
 })();
 
  document.querySelectorAll('a[href="#payment-info"]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();document.querySelector('#payment-info').showModal()}));
+
+(() => {const d=document.querySelector('#welcome-dialog');if(!d)return;let seen=false;try{seen=sessionStorage.getItem('aam-welcome-v1')==='1'}catch{};const mark=()=>{try{sessionStorage.setItem('aam-welcome-v1','1')}catch{}};d.addEventListener('close',()=>{document.body.classList.remove('welcome-open');mark()});d.querySelector('.welcome-browse').addEventListener('click',()=>{d.close();document.querySelector('#hero-title')?.focus({preventScroll:true})});d.querySelector('a').addEventListener('click',()=>d.close());if(!seen&&!location.hash&&typeof d.showModal==='function'){d.showModal();document.body.classList.add('welcome-open');mark()}})();
